@@ -1,0 +1,16 @@
+# Secrets
+Project 1/.env
+Project 1/.env.local
+Project 1/.env.*.local
+
+# Dependencies
+Project 1/node_modules/
+Project 1/.yarn/cache
+Project 1/.yarn/unplugged
+Project 1/.yarn/build-state.yml
+Project 1/.yarn/install-state.gz
+
+# Build outputs
+Project 1/packages/app/build/
+Project 1/packages/backend/dist/
+Project 1/coverage/
