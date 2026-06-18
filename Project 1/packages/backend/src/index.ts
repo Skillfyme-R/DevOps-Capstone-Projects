@@ -89,7 +89,7 @@ async function bootstrap(): Promise<void> {
 
   // Allow requests from the frontend origin
   app.use(cors({
-    origin:      ['http://localhost:3000', 'http://localhost:3002', config.backend?.cors?.origin].filter(Boolean) as string[],
+    origin:      ['http://localhost:3000', 'http://localhost:3002', 'http://localhost:3003', config.backend?.cors?.origin].filter(Boolean) as string[],
     credentials: true,
     methods:     ['GET', 'HEAD', 'PATCH', 'POST', 'PUT', 'DELETE'],
   }));
@@ -129,7 +129,7 @@ async function bootstrap(): Promise<void> {
   app.use(errorHandler());
 
   // ── 7. Start HTTP Server ──────────────────────────────────────────────────
-  const port = config.backend?.listen?.port ?? 7007;
+  const port = process.env.PORT ? parseInt(process.env.PORT) : (config.backend?.listen?.port ?? 7007);
   const host = config.backend?.listen?.host ?? '0.0.0.0';
 
   const server = app.listen(port, host, () => {

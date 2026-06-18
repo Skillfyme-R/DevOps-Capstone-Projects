@@ -51,6 +51,13 @@ const depositSchema = Joi.object({
   source:      Joi.string().valid('bank_transfer', 'card', 'cash').default('bank_transfer'),
 });
 
+const withdrawalSchema = Joi.object({
+  accountId:   Joi.string().uuid().required(),
+  amount:      Joi.number().positive().precision(2).required(),
+  currency:    Joi.string().length(3).uppercase().default('USD'),
+  description: Joi.string().max(200).optional().allow(''),
+});
+
 export function transactionRoutes() {
   const router = Router();
 
@@ -259,6 +266,46 @@ export function transactionRoutes() {
 
     await cache.del(CACHE_KEYS.accountBalance(value.accountId));
     transactionsTotal.labels('deposit', value.currency, 'completed').inc();
+
+    return res.status(201).json({ transactionId, status: 'completed', amount: value.amount });
+  });
+
+  router.post('/withdrawal', async (req: any, res) => {
+    const { error, value } = withdrawalSchema.validate(req.body);
+    if (error) throw new ValidationError(error.details[0].message);
+
+    const { db, cache, user } = req;
+
+    const account = await db(TABLES.ACCOUNTS)
+      .where({ id: value.accountId, user_id: user.id, status: 'active' })
+      .whereNull('deleted_at').first();
+    if (!account) throw new NotFoundError('Account', value.accountId);
+
+    if (parseFloat(account.available_balance) < value.amount) {
+      throw new ValidationError('Insufficient funds');
+    }
+
+    const transactionId = uuidv4();
+
+    await db.transaction(async (trx: Knex.Transaction) => {
+      await trx(TABLES.TRANSACTIONS).insert({
+        id:          transactionId,
+        account_id:  value.accountId,
+        type:        'withdrawal',
+        amount:      value.amount,
+        currency:    value.currency,
+        description: value.description ?? 'Bill payment',
+        status:      'completed',
+        created_at:  new Date(),
+      });
+
+      await trx(TABLES.ACCOUNTS).where({ id: value.accountId })
+        .decrement('balance',           value.amount)
+        .decrement('available_balance', value.amount);
+    });
+
+    await cache.del(CACHE_KEYS.accountBalance(value.accountId));
+    transactionsTotal.labels('withdrawal', value.currency, 'completed').inc();
 
     return res.status(201).json({ transactionId, status: 'completed', amount: value.amount });
   });

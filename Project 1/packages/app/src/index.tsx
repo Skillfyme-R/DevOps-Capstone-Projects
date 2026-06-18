@@ -1,15 +1,4 @@
-/**
- * NexusFinance Frontend — Application Bootstrap
- *
- * This is the entry point React calls first.
- * It wraps the whole app in:
- *   - QueryClientProvider  → enables data fetching with react-query
- *   - ThemeProvider        → applies NexusFinance brand colors and typography
- *   - BrowserRouter        → enables client-side URL navigation
- *   - ToastContainer       → renders notifications anywhere in the app
- */
-
-import React from 'react';
+import React, { createContext, useContext, useState, useMemo } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
@@ -18,35 +7,40 @@ import { CssBaseline } from '@mui/material';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-import { App }           from './App';
-import { nexusTheme }    from './styles/theme';
+import { App }                            from './App';
+import { nexusTheme, nexusThemeDark }     from './styles/theme';
 
-// Configure react-query defaults
-// These settings apply to ALL data fetching in the app
+// Dark mode context — lets any component read/toggle dark mode
+interface ThemeModeCtx { isDark: boolean; toggle: () => void }
+export const ThemeModeContext = createContext<ThemeModeCtx>({ isDark: false, toggle: () => {} });
+export const useThemeMode = () => useContext(ThemeModeContext);
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime:            0,       // Always refetch — balances must be live
-      cacheTime:            60_000,  // Keep in memory for 1 minute
+      staleTime:            0,
+      cacheTime:            60_000,
       retry:                2,
       refetchOnWindowFocus: true,
       refetchOnMount:       true,
     },
-    mutations: {
-      retry: 0, // Never auto-retry mutations (payments, transfers — user must re-confirm)
-    },
+    mutations: { retry: 0 },
   },
 });
 
-const rootElement = document.getElementById('root')!;
-const root = ReactDOM.createRoot(rootElement);
+function Root() {
+  const [isDark, setIsDark] = useState(() => localStorage.getItem('nexus-theme') === 'dark');
+  const toggle = () => setIsDark(prev => {
+    const next = !prev;
+    localStorage.setItem('nexus-theme', next ? 'dark' : 'light');
+    return next;
+  });
+  const ctx = useMemo(() => ({ isDark, toggle }), [isDark]);
 
-root.render(
-  <React.StrictMode>
-    {/* StrictMode runs every component twice in development to catch side effects */}
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider theme={nexusTheme}>
-        <CssBaseline /> {/* Normalize CSS across browsers */}
+  return (
+    <ThemeModeContext.Provider value={ctx}>
+      <ThemeProvider theme={isDark ? nexusThemeDark : nexusTheme}>
+        <CssBaseline />
         <BrowserRouter>
           <App />
           <ToastContainer
@@ -56,10 +50,13 @@ root.render(
             newestOnTop
             closeOnClick
             pauseOnHover
-            theme="light"
+            theme={isDark ? 'dark' : 'light'}
           />
         </BrowserRouter>
       </ThemeProvider>
-    </QueryClientProvider>
-  </React.StrictMode>
-);
+    </ThemeModeContext.Provider>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root')!);
+root.render(<React.StrictMode><QueryClientProvider client={queryClient}><Root /></QueryClientProvider></React.StrictMode>);

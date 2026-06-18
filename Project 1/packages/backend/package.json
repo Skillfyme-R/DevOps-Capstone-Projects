@@ -5,7 +5,7 @@
   "private": true,
   "main": "dist/index.js",
   "scripts": {
-    "start:dev": "ts-node --transpile-only src/index.ts",
+    "start:dev": "PORT=7008 ts-node --transpile-only src/index.ts",
     "build": "tsc --project tsconfig.json",
     "start": "node dist/index.js",
     "lint": "eslint src --ext .ts",

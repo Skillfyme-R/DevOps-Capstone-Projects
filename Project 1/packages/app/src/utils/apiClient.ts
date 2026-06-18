@@ -12,7 +12,7 @@
 
 import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 
-const BASE_URL = (window as any).REACT_APP_API_URL ?? 'http://localhost:7007';
+const BASE_URL = (window as any).REACT_APP_API_URL ?? 'http://localhost:7008';
 
 export const apiClient = axios.create({
   baseURL: `${BASE_URL}/api/v1`,
@@ -54,7 +54,7 @@ apiClient.interceptors.response.use(
         const refreshToken = localStorage.getItem('nexus_refresh_token');
         if (!refreshToken) throw new Error('No refresh token');
 
-        const { data } = await axios.post(`${BASE_URL}/api/v1/auth/refresh`, { refreshToken });
+        const { data } = await axios.post(`http://localhost:7008/api/v1/auth/refresh`, { refreshToken });
         localStorage.setItem('nexus_access_token',  data.accessToken);
         localStorage.setItem('nexus_refresh_token', data.refreshToken);
 

@@ -1,5 +1,14 @@
 # NexusFinance — Enterprise Digital Banking Platform
 
+![CI](https://img.shields.io/github/actions/workflow/status/Skillfyme-R/DevOps-Capstone-Projects/ci.yml?branch=main&label=CI&logo=github)
+![Node](https://img.shields.io/badge/Node.js-18.x-339933?logo=node.js&logoColor=white)
+![React](https://img.shields.io/badge/React-18.2-61DAFB?logo=react&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.1-3178C6?logo=typescript&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED?logo=docker&logoColor=white)
+![Kubernetes](https://img.shields.io/badge/Kubernetes-EKS-326CE5?logo=kubernetes&logoColor=white)
+![Terraform](https://img.shields.io/badge/Terraform-AWS-7B42BC?logo=terraform&logoColor=white)
+![License](https://img.shields.io/badge/License-Skillfyme-blue)
+
 > A production-grade, full-stack digital banking platform built with modern DevOps practices, cloud-native architecture, and enterprise security standards.
 
 ---
