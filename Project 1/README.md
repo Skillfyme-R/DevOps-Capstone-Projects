@@ -1,184 +1,288 @@
 # NexusFinance — Enterprise Digital Banking Platform
 
-![CI](https://img.shields.io/github/actions/workflow/status/Skillfyme-R/DevOps-Capstone-Projects/ci.yml?branch=main&label=CI&logo=github)
-![Node](https://img.shields.io/badge/Node.js-18.x-339933?logo=node.js&logoColor=white)
-![React](https://img.shields.io/badge/React-18.2-61DAFB?logo=react&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.1-3178C6?logo=typescript&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED?logo=docker&logoColor=white)
-![Kubernetes](https://img.shields.io/badge/Kubernetes-EKS-326CE5?logo=kubernetes&logoColor=white)
-![Terraform](https://img.shields.io/badge/Terraform-AWS-7B42BC?logo=terraform&logoColor=white)
-![License](https://img.shields.io/badge/License-Skillfyme-blue)
+> A production-grade, cloud-native digital banking and financial analytics platform built on a plugin-based monorepo architecture. Designed for scalability, regulatory compliance, and high availability.
 
-> A production-grade, full-stack digital banking platform built with modern DevOps practices, cloud-native architecture, and enterprise security standards.
+[![CI Pipeline](https://github.com/Skillfyme-R/DevOps-Capstone-Projects/actions/workflows/ci.yml/badge.svg)](https://github.com/Skillfyme-R/DevOps-Capstone-Projects/actions/workflows/ci.yml)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.1-blue)
+![Node](https://img.shields.io/badge/Node.js-18.x-green)
+![React](https://img.shields.io/badge/React-18.x-61DAFB)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-336791)
+![Redis](https://img.shields.io/badge/Redis-7-DC382D)
+![Kubernetes](https://img.shields.io/badge/Kubernetes-HPA%203--20%20pods-326CE5)
+![License](https://img.shields.io/badge/License-Skillfyme-orange)
+
+---
+
+## Table of Contents
+
+1. [Project Overview](#1-project-overview)
+2. [Business Problem](#2-business-problem)
+3. [Objectives](#3-objectives)
+4. [Key Features](#4-key-features)
+5. [Architecture](#5-architecture)
+6. [Tech Stack](#6-tech-stack)
+7. [Folder Structure](#7-folder-structure)
+8. [Database Design](#8-database-design)
+9. [API Documentation](#9-api-documentation)
+10. [Security Implementation](#10-security-implementation)
+11. [CI/CD Pipeline](#11-cicd-pipeline)
+12. [Deployment Architecture](#12-deployment-architecture)
+13. [Monitoring & Logging](#13-monitoring--logging)
+14. [Installation & Setup](#14-installation--setup)
+15. [Challenges & Learnings](#15-challenges--learnings)
+16. [Future Enhancements](#16-future-enhancements)
+17. [License](#17-license)
 
 ---
 
 ## 1. Project Overview
 
-**NexusFinance** is a comprehensive digital banking platform that simulates a real-world financial services application. It provides a complete banking experience — account management, fund transfers, loan origination, analytics, and payments — backed by a secure REST API, PostgreSQL database, Redis cache, and a full DevOps pipeline including containerization, Kubernetes orchestration, Terraform infrastructure-as-code, CI/CD automation, and observability tooling.
+**NexusFinance** is an enterprise-grade digital banking platform that delivers core banking capabilities through a modern, cloud-native architecture. It provides retail banking customers with real-time account management, cross-account fund transfers, bill payments, loan applications with EMI calculation, and financial analytics — all within a secure, responsive web application.
 
-| Attribute | Details |
-|-----------|---------|
+| Attribute | Detail |
+|-----------|--------|
 | **Platform Name** | NexusFinance |
-| **Type** | Digital Banking / FinTech SaaS |
-| **Architecture** | Monorepo, Microservice-Ready, Cloud-Native |
-| **Target Users** | Retail banking customers, internal finance teams |
-| **Deployment** | Docker (local), Kubernetes on AWS EKS (production) |
-| **Environment** | Development, Staging, Production |
+| **Version** | 1.0.0 |
+| **Architecture** | Plugin-based Monorepo (Yarn Workspaces) |
+| **Deployment Target** | AWS EKS (Kubernetes) |
+| **Frontend Port** | `3003` (development) |
+| **Backend Port** | `7008` (development) |
+| **Supported Currencies** | USD, EUR, GBP, JPY, CAD, AUD, SGD, INR, AED |
+| **Max Transaction Limit** | $500,000 / month |
+| **Availability Target** | 99.9% uptime |
+
+### Target Users
+
+- **Retail Banking Customers** — individuals managing personal finances, transfers, loan applications, and bill payments
+- **Engineering & DevOps Teams** — teams operating cloud-native financial infrastructure at scale
+- **Hiring Managers & Technical Interviewers** — evaluating full-stack, DevOps, and cloud architecture competencies
+
+### Business Value
+
+NexusFinance demonstrates the complete engineering lifecycle required to build, deploy, and operate a financial-grade platform: secure JWT authentication with account lockout, double-entry transaction recording with ACID guarantees, Kubernetes autoscaling from 3 to 20 pods, Terraform infrastructure-as-code on AWS, and real-time Prometheus/Grafana observability — all from a single monorepo.
 
 ---
 
 ## 2. Business Problem
 
-Traditional banking software is monolithic, slow to deploy, and difficult to scale. Financial institutions struggle with:
+Traditional banking interfaces are fragmented, slow, and lack real-time visibility into personal financial health. Customers navigate multiple portals for accounts, transfers, bill payments, and loans. Backend systems are often monolithic, hard to scale, and difficult to monitor in production.
 
-- **Slow release cycles** — manual deployments cause weeks-long release windows
-- **Poor observability** — no real-time visibility into system health or transaction failures
-- **Fragile infrastructure** — single points of failure with no auto-scaling capability
-- **Security gaps** — weak authentication, no audit trails, exposed secrets in code
-- **Poor developer experience** — no local environment parity with production
+| Challenge | Business Impact |
+|-----------|----------------|
+| Fragmented banking portals | Poor customer experience, high drop-off rates |
+| Monolithic backends | Inability to scale individual features under traffic spikes |
+| No real-time analytics | Customers lack spending insights and net worth awareness |
+| Weak observability | Slow incident response, undetected performance degradation |
+| Manual infrastructure provisioning | Error-prone deployments, inconsistent environments across teams |
+| Poor security posture | Exposure to brute-force, XSS, injection, and session attacks |
+| No audit trail | Non-compliance with financial regulations (AML/KYC) |
 
-NexusFinance addresses all of these with a modern DevOps-first architecture: containerized services, automated CI/CD pipelines, infrastructure-as-code, real-time monitoring, and zero-downtime deployments.
+NexusFinance addresses all of these by delivering a unified platform with plugin-based extensibility, real-time data, automated deployments, and a defense-in-depth security model.
 
 ---
 
 ## 3. Objectives
 
 ### Primary Objectives
-- Deliver a fully functional digital banking experience with real-time financial data
-- Implement production-grade security: JWT authentication, bcrypt hashing, rate limiting, RBAC
-- Achieve zero-downtime deployments using Kubernetes rolling update strategy
+- Deliver a fully functional digital banking experience in a single unified platform
+- Implement production-grade security (JWT, bcrypt, rate limiting, account lockout, RBAC)
+- Demonstrate enterprise DevOps practices across the full software delivery lifecycle
 
 ### Technical Objectives
-- Containerize all services using Docker with environment parity across dev/staging/prod
-- Automate infrastructure provisioning using Terraform on AWS
-- Build a CI/CD pipeline with automated testing, security scanning, and staged deployments
-- Implement observability with Prometheus metrics, Grafana dashboards, and structured logging
+- Build a type-safe, scalable monorepo using Yarn Berry workspaces and TypeScript
+- Deploy on Kubernetes with Horizontal Pod Autoscaling (3–20 pods)
+- Provision AWS cloud infrastructure with Terraform (VPC, EKS, RDS, Redis, S3)
+- Automate build → test → deploy pipeline with GitHub Actions CI/CD
+- Collect business and infrastructure metrics with Prometheus, visualise with Grafana
 
 ### Business Objectives
-- Demonstrate a platform that can handle enterprise financial workloads
-- Support 9 currencies, KYC compliance, AML checks, and fraud detection
-- Enable horizontal auto-scaling to handle traffic spikes without manual intervention
+- Support 9 global currencies with configurable per-transaction and daily limits
+- Enable loan applications up to $500,000 with real-time amortization scheduling
+- Provide spending analytics by category, cashflow trends, and net worth tracking
+- Enforce KYC-level access control for regulatory compliance
 
 ### Expected Outcomes
-- A fully deployable banking platform with documented runbooks
-- Sub-200ms API response times under normal load
-- 99.9% uptime via Kubernetes health probes, HPA, and multi-AZ deployment
+- Zero-downtime deployments via rolling update strategy (`maxUnavailable: 0`)
+- Sub-10ms API responses on cache hits via Redis query caching
+- Automatic scaling from 3 to 20 pods under traffic spikes via Kubernetes HPA
+- Complete immutable audit trail for all financial operations
 
 ---
 
 ## 4. Key Features
 
+### Core Banking Features
+
 | Feature | Description | Business Benefit |
 |---------|-------------|-----------------|
-| **Multi-Account Management** | Checking, Savings, Investment, Credit account types with real-time balances | Customers manage all finances in one place |
-| **Fund Transfers** | Internal account-to-account transfers with instant balance updates | Replaces manual wire transfer processes |
-| **Deposit & Withdrawal** | Deposit funds with descriptions; withdraw with balance validation | Core banking operation with audit trail |
-| **Loan Origination** | Apply for loans, view amortization schedule, make repayments | Drives lending revenue with automated processing |
-| **Payments (Stripe)** | External payments via Stripe PaymentIntent; webhook event handling | Secure card payments with PCI-compliant integration |
-| **Financial Analytics** | Spending breakdown by category, monthly cash flow, net worth trends | Customer financial health visibility |
-| **JWT Authentication** | Access + refresh token pair, auto-refresh on expiry | Secure, stateless authentication |
-| **KYC/AML Compliance** | KYC level tracking (0–3), AML flag support, fraud scoring | Regulatory compliance built into the data model |
-| **Redis Caching** | Account and session data cached; invalidated on mutations | 10x faster reads; reduced database load |
-| **Soft Delete** | Accounts and users logically deleted, never hard-removed | Audit compliance, data recovery capability |
-| **Rate Limiting** | Per-IP request throttling via rate-limiter-flexible | Brute-force protection on auth endpoints |
-| **Auto-Scaling (HPA)** | Kubernetes HPA scales pods 3–20 based on CPU/memory/requests | Handles traffic spikes without manual intervention |
-| **Zero-Downtime Deploys** | RollingUpdate with maxUnavailable=0 | No customer impact during releases |
-| **Multi-Currency Support** | USD, EUR, GBP, JPY, CAD, AUD, SGD, INR, AED | Ready for international expansion |
-| **Real-Time Monitoring** | Prometheus + Grafana with custom alert rules | Proactive incident detection before customer impact |
+| Multi-Account Management | Create, view, and close Checking, Savings, and Investment accounts | All finances managed in one unified dashboard |
+| Real-Time Balances | Live balance and available balance with Redis cache invalidation on every write | Accurate financial picture — no stale data |
+| Fund Transfers | ACID-safe cross-account transfers with double-entry bookkeeping | Zero data inconsistency in money movement |
+| Bill Payments | Pay bills by category (Electricity, Internet, Water, Gas, Mobile) with payee name and reference | Reduces manual payment friction with guided flow |
+| Withdrawal (Debit) | Server-side insufficient funds check before every debit | Prevents overdrafts and data corruption |
+| Transaction History | Filterable, searchable transaction log grouped by date with CSV export | Audit-ready financial records for customers |
+| Loan Applications | Apply for loans $1,000–$500,000 with built-in EMI and amortization calculator | Transparent cost visibility drives faster credit decisions |
+| Financial Analytics | Spending breakdown by category, cashflow trends, net worth sparkline | Actionable financial insights for better decision-making |
+
+### Advanced UI Features
+
+| Feature | Description | Business Benefit |
+|---------|-------------|-----------------|
+| Dark Mode | Full MUI theme toggle, persisted to `localStorage` | Accessibility and user preference support |
+| Animated Balance Counters | `requestAnimationFrame` ease-out cubic animation on all monetary values | Premium, engaging user experience |
+| Landing Page | Public marketing page with hero, stats grid, feature showcase, and CTA | Acquisition and onboarding conversion funnel |
+| Profile Completeness Tracker | KYC progress bar with step-by-step completion actions | Drives KYC conversion and unlocks higher transaction limits |
+| Grouped Transaction View | Transactions grouped by Today / Yesterday / This Week / Earlier | Fast transaction scanning without date parsing |
+| EMI Calculator | Interactive sliders (amount $1K–$500K, term 12–360 months) pre-fill the loan application | Removes uncertainty; customers know their payment before applying |
+
+### Security Features
+
+| Feature | Description | Business Benefit |
+|---------|-------------|-----------------|
+| JWT Authentication | 15-minute access tokens + 30-day refresh tokens | Stateless, scalable auth with minimal blast radius on compromise |
+| Silent Token Refresh | Axios interceptor silently refreshes expired tokens | Zero user interruption on token expiry |
+| Account Lockout | 5 failed login attempts triggers 30-minute lockout | Brute-force protection without permanent account damage |
+| Redis Rate Limiting | Per-route distributed rate limits (login: 5/min, payments: 10/min) | API abuse prevention at scale |
+| Helmet.js Security Headers | CSP, HSTS, X-Frame-Options, X-Content-Type-Options | Full OWASP HTTP security hardening |
+| bcrypt Password Hashing | Cost factor 12 (~250ms per hash operation) | Rainbow table and brute-force resistance |
+| Joi Input Validation | Schema validation on every request body before processing | Prevents injection attacks and malformed inputs |
+| Insufficient Funds Guard | Server-side balance check on every withdrawal and transfer | Prevents overdrafts and negative balance states |
+| KYC Access Control | `requireKyc(level)` middleware gates high-value operations | Regulatory compliance for large transfers |
+
+### DevOps & Scalability Features
+
+| Feature | Description | Business Benefit |
+|---------|-------------|-----------------|
+| Kubernetes HPA | Auto-scales 3→20 pods on CPU (70%), memory (80%), and custom metrics | Handles traffic spikes with zero manual intervention |
+| Rolling Deployments | `maxUnavailable: 0` zero-downtime rollouts | No customer-facing downtime during any release |
+| Multi-Stage Docker Builds | Build stage compiles TypeScript; runtime stage is minimal Alpine image | Smaller attack surface, faster image pulls, lower storage cost |
+| Terraform IaC | VPC, EKS, RDS, Redis, S3 provisioned as version-controlled code | Reproducible, auditable, and diff-able infrastructure |
+| Prometheus Metrics | Custom business metrics + Node.js runtime metrics exposed at `/metrics` | Proactive incident detection before customers are impacted |
+| Graceful Shutdown | 30-second SIGTERM grace period drains in-flight requests before exit | Zero dropped payment or transfer requests during pod termination |
+| Request ID Tracing | UUID injected into every request, propagated through logs | Full trace correlation from client error to server log line |
 
 ---
 
 ## 5. Architecture
 
-### High-Level Architecture
+### High-Level System Architecture
 
 ```mermaid
 flowchart TB
     subgraph Client["Client Layer"]
-        Browser["Browser\nReact 18 + MUI"]
+        Browser["Browser\nReact 18 + MUI v5"]
     end
 
-    subgraph Gateway["API Gateway / Load Balancer"]
-        LB["AWS ALB\n(Ingress Controller)"]
+    subgraph Edge["Edge / Ingress"]
+        ALB["AWS ALB\nLoad Balancer + TLS"]
+        Nginx["Nginx\nSPA Static Hosting"]
     end
 
-    subgraph App["Application Layer (EKS)"]
-        FE["Frontend Service\nNginx + React"]
-        BE["Backend API\nNode.js + Express\n3–20 Replicas (HPA)"]
+    subgraph AppLayer["Application Layer — AWS EKS"]
+        direction LR
+        FE1["Frontend Pod\n(Nginx)"]
+        FE2["Frontend Pod\n(Nginx)"]
+        BE1["Backend Pod\n(Node.js)"]
+        BE2["Backend Pod\n(Node.js)"]
+        BE3["Backend Pod\n(Node.js)"]
+        HPA["HPA Controller\n3–20 pods"]
     end
 
-    subgraph Data["Data Layer"]
-        PG["PostgreSQL 15\nPrimary Database"]
-        RD["Redis 7\nSession & Cache"]
+    subgraph DataLayer["Data Layer — Isolated Subnet"]
+        PG["PostgreSQL 15\nRDS Multi-AZ"]
+        Redis["Redis 7\nElastiCache"]
     end
 
-    subgraph Integrations["External Integrations"]
-        Stripe["Stripe\nPayments"]
+    subgraph Observability["Observability"]
+        Prom["Prometheus"]
+        Graf["Grafana"]
         Sentry["Sentry\nError Tracking"]
-        DD["Datadog\nAPM"]
+        DD["Datadog APM"]
     end
 
-    subgraph Observability["Observability Stack"]
-        Prom["Prometheus\nMetrics"]
-        Graf["Grafana\nDashboards"]
-        Alert["Alertmanager\nSlack + PagerDuty"]
+    subgraph Integrations["External Services"]
+        Stripe["Stripe\nPayments"]
+        Plaid["Plaid\nBank Links"]
+        SendGrid["SendGrid\nEmail"]
+        Twilio["Twilio\nSMS"]
     end
 
-    Browser --> LB
-    LB --> FE
-    LB --> BE
-    BE --> PG
-    BE --> RD
-    BE --> Stripe
-    BE --> Sentry
-    BE --> DD
-    BE --> Prom
-    Prom --> Graf
-    Prom --> Alert
+    Browser --> ALB
+    ALB --> FE1 & FE2
+    ALB --> BE1 & BE2 & BE3
+    FE1 & FE2 --> Nginx
+    BE1 & BE2 & BE3 --> PG
+    BE1 & BE2 & BE3 --> Redis
+    BE1 --> Prom --> Graf
+    BE1 & BE2 & BE3 --> Sentry
+    BE1 --> DD
+    BE1 & BE2 & BE3 -.-> Stripe & Plaid & SendGrid & Twilio
+    HPA -.->|"scales"| BE1 & BE2 & BE3
 ```
 
-### Request Flow
+### Request Flow — Authenticated API Call
 
 ```mermaid
 sequenceDiagram
-    participant U as Browser
-    participant FE as React Frontend
-    participant BE as Express Backend
-    participant RD as Redis Cache
-    participant PG as PostgreSQL
+    participant U as User Browser
+    participant F as React Frontend
+    participant AX as Axios Interceptor
+    participant B as Express Backend
+    participant MW as Auth Middleware
+    participant R as Redis Cache
+    participant D as PostgreSQL
 
-    U->>FE: Navigate to /accounts
-    FE->>BE: GET /api/v1/accounts (JWT)
-    BE->>BE: Validate JWT token
-    BE->>RD: Check cache (user:accounts:<id>)
-    alt Cache HIT
-        RD-->>BE: Return cached accounts
+    U->>F: Navigate to Dashboard
+    F->>AX: GET /api/v1/analytics/summary
+    AX->>AX: Inject Bearer JWT from localStorage
+    AX->>B: HTTP Request + Authorization header
+    B->>MW: Verify JWT signature + expiry
+    MW->>B: Attach user context (id, roles, kycLevel)
+    B->>R: GET cache:summary:userId
+    alt Cache HIT (TTL not expired)
+        R-->>B: Cached JSON
     else Cache MISS
-        BE->>PG: SELECT * FROM nexus_accounts
-        PG-->>BE: Rows returned
-        BE->>RD: Store in cache (TTL: 60s)
+        B->>D: SELECT aggregates from transactions
+        D-->>B: Result rows
+        B->>R: SET cache:summary:userId (TTL 300s)
     end
-    BE-->>FE: JSON response { accounts: [...] }
-    FE-->>U: Render account cards
+    B-->>AX: JSON Response
+    alt 401 Received
+        AX->>B: POST /auth/refresh with refreshToken
+        B-->>AX: New accessToken
+        AX->>B: Retry original request
+    end
+    AX-->>F: Resolved data
+    F->>F: Animate counters (requestAnimationFrame)
+    F-->>U: Rendered dashboard
 ```
 
-### CI/CD Pipeline Flow
+### Backend Plugin Architecture
 
 ```mermaid
 flowchart LR
-    Dev["Developer\nPush / PR"] --> GH["GitHub\nRepository"]
-    GH --> Lint["Lint\nESLint"]
-    Lint --> TC["Type Check\nTypeScript"]
-    TC --> Test["Tests\nJest + Integration"]
-    Test --> Sec["Security Scan\nyarn audit\n+ TruffleHog"]
-    Sec --> Build["Docker Build\nghcr.io image"]
-    Build --> Stage["Deploy Staging\nkubectl rolling update"]
-    Stage --> Smoke["Smoke Tests\n/healthz/ready"]
-    Smoke --> Approval["Manual Approval\nRequired"]
-    Approval --> Prod["Deploy Production\nZero-downtime rollout"]
-    Prod --> Release["GitHub Release\nv<run-number>"]
-    Prod --> Notify["Slack Notification"]
+    subgraph Monorepo["Yarn Berry Workspace Monorepo"]
+        subgraph packages["packages/"]
+            APP["@nexusfinance/app\nReact 18 Frontend"]
+            BACK["@nexusfinance/backend\nExpress API"]
+        end
+        subgraph plugins["plugins/"]
+            NEXP["nexus-accounts\nStandalone Plugin"]
+        end
+    end
+
+    subgraph BackendPlugins["Route Plugins — packages/backend/src/plugins/"]
+        AUTH["auth/routes.ts\nRegister, Login, Refresh"]
+        ACCOUNTS["accounts/routes.ts\nCRUD + Balance"]
+        TX["transactions/routes.ts\nTransfer, Deposit, Withdrawal"]
+        LOANS["loans/routes.ts\nApply, Schedule, Status"]
+        PAY["payments/routes.ts\nSend, Receive, Methods"]
+        ANALYTICS["analytics/routes.ts\nSummary, Spending, Cashflow"]
+        AUDIT["audit/routes.ts\nCompliance Trail"]
+        HEALTH["health/routes.ts\nLiveness + Readiness"]
+    end
+
+    BACK --> AUTH & ACCOUNTS & TX & LOANS & PAY & ANALYTICS & AUDIT & HEALTH
 ```
 
 ---
@@ -189,537 +293,651 @@ flowchart LR
 
 | Technology | Version | Purpose |
 |------------|---------|---------|
-| React | 18.2.0 | UI framework |
-| React Router | 6.15.0 | Client-side routing |
-| Material UI (MUI) | 5.14.5 | Component library |
-| Emotion | 11.11.1 | CSS-in-JS styling |
-| React Query | 3.39.3 | Server state management, caching |
-| Zustand | 4.4.1 | Client state management |
-| Recharts | 2.7.3 | Financial charts (pie, bar) |
-| React Hook Form | 7.45.4 | Form validation |
-| Axios | 1.4.0 | HTTP client |
-| date-fns | 2.30.0 | Date formatting |
-| react-toastify | 9.1.3 | Toast notifications |
-| TypeScript | 5.1.6 | Static typing |
+| React | 18.2 | Component-based UI framework |
+| TypeScript | 5.1 | Static typing for compile-time reliability |
+| Material UI (MUI) | 5.14 | Enterprise UI component library with theming |
+| React Router | 6.15 | Client-side routing with protected route guards |
+| React Query | 3.39 | Server state management, caching, and refetch control |
+| Recharts | 2.7 | Financial charts — PieChart, LineChart, BarChart |
+| Axios | 1.4 | HTTP client with JWT injection and refresh interceptors |
+| React Hook Form | 7.45 | Performant form state and validation |
+| Zustand | 4.4 | Lightweight global client state management |
+| date-fns | 2.30 | Date formatting and range calculations |
 
 ### Backend
 
 | Technology | Version | Purpose |
 |------------|---------|---------|
-| Node.js | 18.12+ | Runtime |
-| Express.js | 4.18.2 | HTTP framework |
-| TypeScript | 5.1.6 | Static typing |
-| Knex.js | 3.0.1 | SQL query builder + migrations |
-| Passport.js | 0.6.0 | Authentication middleware |
-| JWT (jsonwebtoken) | — | Access + refresh token auth |
-| bcryptjs | 2.4.3 | Password hashing (cost factor 10) |
-| Stripe SDK | 13.4.0 | Payment processing |
-| Winston | 3.10.0 | Structured JSON logging |
-| prom-client | 14.2.0 | Prometheus metrics exposure |
-| dd-trace | 4.14.0 | Datadog APM tracing |
-| Sentry | 7.65.0 | Error tracking |
-| rate-limiter-flexible | 3.0.0 | API rate limiting |
-| node-cron | 3.0.2 | Scheduled jobs (interest, reports) |
-| Joi | — | Request body validation |
-| Helmet | — | Security HTTP headers |
-| Morgan | — | HTTP access logging |
-| dotenv | — | Environment variable loading |
+| Node.js | 18 LTS | JavaScript server runtime |
+| Express.js | 4.18 | HTTP framework with middleware chain |
+| TypeScript | 5.1 | Type-safe server-side code |
+| Knex.js | 3.0 | SQL query builder with migration support |
+| Joi | 17.9 | Declarative request body schema validation |
+| jsonwebtoken | 9.0 | JWT signing and verification |
+| bcryptjs | 2.4 | Password hashing at cost factor 12 |
+| Passport.js | 0.6 | Pluggable auth strategies (JWT, Google OAuth) |
+| Winston | 3.10 | Structured JSON application logging |
+| Morgan | 1.10 | HTTP access log middleware |
+| Helmet.js | 7.0 | HTTP security headers (CSP, HSTS, XSS) |
+| Compression | 1.7 | Gzip response compression |
+| prom-client | 14.2 | Prometheus metrics exposure |
+| rate-limiter-flexible | 3.0 | Redis-backed distributed rate limiting |
+| Sentry Node SDK | 7.65 | Error tracking and performance monitoring |
+| dd-trace | 4.14 | Datadog APM distributed tracing |
+| Stripe | 13.4 | Payment processing SDK |
+| node-cron | 3.0 | Scheduled background jobs |
+| uuid | 9.0 | UUID v4 generation for all primary keys |
 
 ### Database & Cache
 
 | Technology | Version | Purpose |
 |------------|---------|---------|
-| PostgreSQL | 15-alpine | Primary relational database |
-| Redis | 7-alpine | Session storage + API cache |
-| Knex Migrations | — | Schema version control |
-| Knex Seeds | — | Demo data seeding |
+| PostgreSQL | 15 | Primary ACID-compliant relational database |
+| Redis | 7 | Query caching, session storage, rate limiting |
 
 ### DevOps & Infrastructure
 
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| Docker | — | Containerization |
-| Docker Compose | — | Local multi-service orchestration |
-| Kubernetes (EKS) | — | Production container orchestration |
-| Terraform | AWS ~5.0 | Infrastructure as Code |
-| GitHub Actions | — | CI/CD automation |
-| Yarn Berry | 4.x (PnP) | Monorepo package management |
-| Nginx | — | Frontend static file serving |
-
-### Cloud (AWS)
-
-| Resource | Purpose |
-|----------|---------|
-| EKS | Managed Kubernetes (nexusfinance-staging, nexusfinance-production) |
-| VPC | Isolated network (10.0.0.0/16) with public/private/isolated subnets |
-| ALB | Application Load Balancer via Kubernetes Ingress |
-| RDS | Managed PostgreSQL |
-| ElastiCache | Managed Redis |
-| S3 | Document storage, backups |
-| NAT Gateway | Outbound internet for private subnets |
+| Technology | Purpose |
+|------------|---------|
+| Docker | Multi-stage containerisation for backend and frontend |
+| Docker Compose | Local full-stack and infrastructure-only orchestration |
+| Kubernetes | Production container orchestration with HPA |
+| Terraform | AWS infrastructure provisioning as code |
+| GitHub Actions | CI/CD — lint, type-check, test, build, deploy automation |
+| AWS EKS | Managed Kubernetes cluster |
+| AWS RDS | Managed PostgreSQL in isolated private subnet |
+| AWS ElastiCache | Managed Redis cluster in isolated private subnet |
+| AWS ALB | Application Load Balancer with SSL termination |
+| AWS VPC | Three-tier network segmentation |
+| AWS S3 | Document storage and automated database backups |
+| Nginx | Reverse proxy and React SPA static file server |
 
 ### Monitoring & Observability
 
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| Prometheus | 2.46.0 | Metrics collection (15s scrape interval) |
-| Grafana | 10.1.0 | Dashboards (backend, transactions, loans) |
-| Alertmanager | — | Alert routing → Slack + PagerDuty + Email |
-| Datadog | — | APM, distributed tracing |
-| Sentry | — | Frontend + backend error tracking |
-| Winston | 3.10.0 | Structured JSON logs |
-| Morgan | — | HTTP request access logs |
+| Technology | Purpose |
+|------------|---------|
+| Prometheus | Metrics collection with custom business metrics and alert rules |
+| Grafana | Operational dashboards and metrics visualisation |
+| Sentry | Real-time error tracking with stack traces and release tracking |
+| Datadog APM | Distributed tracing across services and pods |
+| Winston | Structured JSON logging with per-service labels |
+| Morgan | HTTP combined access log for request auditing |
 
 ---
 
 ## 7. Folder Structure
 
 ```text
-Project 1/
-├── packages/
-│   ├── app/                        # React frontend application
-│   │   ├── src/
-│   │   │   ├── components/
-│   │   │   │   ├── auth/           # ProtectedRoute, auth guards
-│   │   │   │   └── layout/         # Sidebar, TopHeader, AppLayout
-│   │   │   ├── hooks/              # useAuth, custom React hooks
-│   │   │   ├── pages/              # One file per route
-│   │   │   │   ├── DashboardPage.tsx
-│   │   │   │   ├── AccountsPage.tsx
-│   │   │   │   ├── AccountDetailPage.tsx
-│   │   │   │   ├── TransactionsPage.tsx
-│   │   │   │   ├── PaymentsPage.tsx
-│   │   │   │   ├── LoanApplyPage.tsx
-│   │   │   │   ├── AnalyticsPage.tsx
-│   │   │   │   ├── LoginPage.tsx
-│   │   │   │   ├── RegisterPage.tsx
-│   │   │   │   └── ProfilePage.tsx
-│   │   │   ├── styles/             # MUI theme, NEXUS_COLORS, CHART_COLORS
-│   │   │   └── utils/              # apiClient (Axios wrapper)
-│   │   ├── public/
-│   │   └── package.json
-│   │
-│   └── backend/                    # Express.js API server
-│       └── src/
-│           ├── index.ts            # App entry, middleware, CORS, dotenv
-│           ├── plugins/            # Feature-based route modules
-│           │   ├── auth/           # Login, register, refresh, /me
-│           │   ├── accounts/       # CRUD + soft delete
-│           │   ├── transactions/   # Transfer, deposit, withdrawal
-│           │   ├── loans/          # Apply, schedule, repayment
-│           │   ├── payments/       # Stripe integration + webhooks
-│           │   ├── analytics/      # Spending, cashflow, net worth
-│           │   ├── audit/          # Compliance event log
-│           │   └── health/         # /healthz, /healthz/live, /healthz/ready
-│           ├── services/
-│           │   ├── database.ts     # Knex connection + table constants
-│           │   └── cache.ts        # Redis client + CACHE_KEYS helpers
-│           ├── middleware/
-│           │   ├── errorHandler.ts # Global error middleware, custom error classes
-│           │   └── auth.ts         # JWT verification middleware
-│           ├── utils/
-│           │   └── logger.ts       # Winston logger factory
-│           ├── migrations/         # Knex schema migrations (plain .js)
-│           └── seeds/              # Demo data seeder
-│
-├── infrastructure/
-│   ├── docker/
-│   │   └── docker-compose.yml      # Postgres, Redis, backend, frontend, Prometheus, Grafana
-│   ├── kubernetes/
-│   │   ├── deployment.yaml         # Backend deployment (3–20 replicas, HPA)
-│   │   ├── service.yaml            # ClusterIP / LoadBalancer services
-│   │   ├── ingress.yaml            # ALB Ingress rules
-│   │   ├── hpa.yaml                # HorizontalPodAutoscaler
-│   │   ├── configmap.yaml          # Non-secret environment config
-│   │   └── secrets.yaml            # Kubernetes secrets
-│   ├── terraform/
-│   │   ├── main.tf                 # Root module
-│   │   ├── variables.tf
-│   │   ├── outputs.tf
-│   │   └── modules/
-│   │       ├── vpc/                # VPC, subnets, IGW, NAT, route tables
-│   │       ├── eks/                # EKS cluster + node groups
-│   │       ├── rds/                # PostgreSQL RDS
-│   │       └── elasticache/        # Redis ElastiCache
-│   └── monitoring/
-│       ├── prometheus.yml          # Scrape configs, retention, targets
-│       ├── grafana/
-│       │   └── dashboards/         # Pre-provisioned JSON dashboards
-│       └── alert-rules.yml         # Critical + warning alert definitions
-│
-├── .github/
-│   └── workflows/
-│       ├── ci.yml                  # Lint → TypeCheck → Test → Scan → Build
-│       └── deploy.yml              # Deploy staging → approval → deploy production
-│
-├── app-config.yaml                 # App-wide configuration (currencies, limits, features)
-├── .env                            # Local secrets (not committed)
-├── package.json                    # Monorepo root, workspace scripts
-└── README.md
+DevOps-Capstone-Projects/
+└── Project 1/                             # NexusFinance platform root
+    ├── packages/
+    │   ├── app/                           # React 18 frontend application
+    │   │   ├── public/
+    │   │   │   └── index.html             # SPA entry point
+    │   │   └── src/
+    │   │       ├── App.tsx                # Routes, lazy loading, protected paths
+    │   │       ├── index.tsx              # Root — ThemeModeContext, QueryClient
+    │   │       ├── components/
+    │   │       │   ├── auth/
+    │   │       │   │   └── ProtectedRoute.tsx   # JWT auth guard
+    │   │       │   └── layout/
+    │   │       │       ├── AppLayout.tsx        # Sidebar + TopHeader shell
+    │   │       │       ├── Sidebar.tsx          # Navigation with active state
+    │   │       │       └── TopHeader.tsx        # Dark mode toggle, notifications
+    │   │       ├── hooks/
+    │   │       │   ├── useAuth.ts         # Auth state, login/logout, token storage
+    │   │       │   └── useCountUp.ts      # requestAnimationFrame counter animation
+    │   │       ├── pages/
+    │   │       │   ├── LandingPage.tsx    # Public marketing page
+    │   │       │   ├── LoginPage.tsx      # Email + password auth form
+    │   │       │   ├── RegisterPage.tsx   # Account creation
+    │   │       │   ├── DashboardPage.tsx  # Net worth, quick actions, analytics
+    │   │       │   ├── AccountsPage.tsx   # Account list and creation
+    │   │       │   ├── AccountDetailPage.tsx   # Account statement view
+    │   │       │   ├── TransactionsPage.tsx    # Search, filter, CSV export
+    │   │       │   ├── PaymentsPage.tsx        # Send Money / Pay Bill (separate)
+    │   │       │   ├── LoansPage.tsx           # Active loans overview
+    │   │       │   ├── LoanApplyPage.tsx       # EMI calculator + application form
+    │   │       │   ├── LoanDetailPage.tsx      # Amortization schedule
+    │   │       │   ├── AnalyticsPage.tsx       # Advanced financial analytics
+    │   │       │   ├── ProfilePage.tsx         # KYC progress tracker
+    │   │       │   └── NotFoundPage.tsx        # 404 fallback
+    │   │       ├── styles/
+    │   │       │   └── theme.ts           # MUI theme — light/dark, brand colours
+    │   │       └── utils/
+    │   │           └── apiClient.ts       # Axios instance with JWT + refresh logic
+    │   └── backend/                       # Express TypeScript API service
+    │       ├── knexfile.js                # Knex config for CLI migration commands
+    │       └── src/
+    │           ├── index.ts               # Bootstrap: config → DB → Redis → Express
+    │           ├── tracer.ts              # Datadog APM (must import first)
+    │           ├── config/
+    │           │   ├── loader.ts          # YAML + env var config loader
+    │           │   └── knexfile.ts        # Knex TypeScript configuration
+    │           ├── middleware/
+    │           │   ├── authMiddleware.ts  # JWT verification, RBAC, KYC guards
+    │           │   ├── errorHandler.ts    # Typed error classes + global handler
+    │           │   ├── metrics.ts         # Prometheus counters, histograms, gauges
+    │           │   ├── rateLimiter.ts     # Route-specific Redis rate limits
+    │           │   └── requestId.ts       # UUID per request for distributed tracing
+    │           ├── plugins/               # Domain route modules (extensible)
+    │           │   ├── auth/routes.ts     # Register, login, refresh, logout, /me
+    │           │   ├── accounts/routes.ts # CRUD accounts + balance management
+    │           │   ├── transactions/routes.ts  # Transfer, deposit, withdrawal
+    │           │   ├── loans/routes.ts    # Apply, approve, schedule, repay
+    │           │   ├── payments/routes.ts # External payment processing
+    │           │   ├── analytics/routes.ts # Summary, spending, cashflow
+    │           │   ├── audit/routes.ts    # Compliance audit trail
+    │           │   └── health/routes.ts   # Liveness and readiness probes
+    │           ├── services/
+    │           │   ├── database.ts        # Knex connection pool initialisation
+    │           │   └── cache.ts           # Redis client, CACHE_KEYS, CACHE_TTL
+    │           ├── migrations/            # Ordered, irreversible schema changes
+    │           │   ├── 001_create_users.js
+    │           │   ├── 002_create_accounts_transactions.js
+    │           │   └── 003_create_loans.js
+    │           ├── seeds/                 # Demo data for development environment
+    │           │   └── 001_demo_data.js
+    │           └── utils/
+    │               └── logger.ts          # Winston structured logger factory
+    ├── plugins/
+    │   └── nexus-accounts/               # Standalone accounts plugin package
+    │       └── src/index.ts
+    ├── infrastructure/
+    │   ├── docker/
+    │   │   ├── Dockerfile.app            # Multi-stage: Node builder → Nginx runtime
+    │   │   ├── Dockerfile.backend        # Multi-stage: TS compiler → Node runtime
+    │   │   ├── docker-compose.yml        # Full stack: app + infra + monitoring
+    │   │   ├── docker-compose.infra.yml  # Dev only: PostgreSQL + Redis
+    │   │   └── nginx.conf                # SPA fallback routing (/index.html)
+    │   ├── kubernetes/
+    │   │   └── base/
+    │   │       ├── backend-deployment.yaml   # 3 replicas, probes, resource limits
+    │   │       └── backend-hpa.yaml          # HPA: CPU 70%, Memory 80%, 3–20 pods
+    │   ├── terraform/
+    │   │   └── modules/
+    │   │       └── vpc/main.tf           # VPC, subnets, NAT, IGW, route tables
+    │   └── monitoring/
+    │       └── prometheus/
+    │           ├── prometheus.yml         # Scrape targets + retention config
+    │           └── alert-rules.yml        # Alerting rules for SLO breach
+    ├── .github/
+    │   └── workflows/
+    │       ├── ci.yml                    # Lint → Type-check → Test → Build
+    │       └── deploy.yml                # Staging → Approval Gate → Production
+    ├── docs/
+    │   ├── architecture/ARCHITECTURE.md
+    │   ├── guides/GETTING_STARTED.md
+    │   └── runbooks/INCIDENT_RESPONSE.md
+    ├── app-config.yaml                   # Platform YAML config (env var references)
+    ├── app-config.production.yaml        # Production config overrides
+    ├── package.json                      # Monorepo root scripts and workspaces
+    ├── tsconfig.json                     # Root TypeScript configuration
+    ├── .eslintrc.js                      # ESLint rules for TS + React
+    ├── .env.example                      # Environment variable template
+    └── yarn.lock                         # Deterministic dependency lock file
 ```
 
 ---
 
 ## 8. Database Design
 
-### Overview
+### Database Overview
 
-PostgreSQL 15 is the primary data store. All tables use UUID primary keys, have `created_at` / `updated_at` timestamps, and support soft deletes via `deleted_at`. Schema changes are managed through versioned Knex migrations.
+PostgreSQL 15 with Knex.js migrations. All monetary values stored as `DECIMAL(19,4)` — never floating point — to guarantee precision across millions of transactions. All tables use UUID primary keys for distributed-safe, non-enumerable ID generation. The transaction table is **append-only** — no updates after insert, ensuring an immutable financial ledger.
 
 ### Entity Relationship Diagram
 
 ```mermaid
 erDiagram
-    NEXUS_USERS {
+    USERS {
         uuid id PK
-        string email UK
-        string password_hash
-        string first_name
-        string last_name
-        string phone
-        string country
-        json roles
+        varchar email UK
+        varchar password_hash
+        varchar first_name
+        varchar last_name
+        varchar phone
+        char country
+        jsonb roles
         int kyc_level
-        string status
+        varchar status
         int failed_login_attempts
         timestamp locked_until
         timestamp last_login_at
         timestamp created_at
         timestamp updated_at
-        timestamp deleted_at
     }
 
-    NEXUS_ACCOUNTS {
+    ACCOUNTS {
         uuid id PK
         uuid user_id FK
-        string account_number UK
-        string account_type
+        varchar account_number UK
+        varchar account_type
+        varchar nickname
         decimal balance
         decimal available_balance
-        string currency
-        string nickname
-        string status
-        decimal interest_rate
-        timestamp created_at
-        timestamp updated_at
+        char currency
+        varchar status
         timestamp deleted_at
+        timestamp created_at
     }
 
-    NEXUS_TRANSACTIONS {
+    TRANSACTIONS {
         uuid id PK
         uuid account_id FK
-        uuid user_id FK
-        string type
+        varchar type
         decimal amount
-        string description
-        string status
-        string currency
-        uuid reference_id
+        char currency
+        varchar description
+        varchar status
+        varchar reference
+        jsonb metadata
         timestamp created_at
-        timestamp updated_at
     }
 
-    NEXUS_LOANS {
+    AUDIT_LOGS {
         uuid id PK
+        uuid user_id FK
+        varchar action
+        varchar resource_type
+        uuid resource_id
+        jsonb changes
+        varchar ip_address
+        timestamp created_at
+    }
+
+    LOAN_APPLICATIONS {
+        uuid id PK
+        uuid user_id FK
+        decimal amount
+        int term_months
+        varchar purpose
+        varchar status
+        decimal income
+        varchar employment_type
+        timestamp created_at
+    }
+
+    LOANS {
+        uuid id PK
+        uuid application_id FK
         uuid user_id FK
         decimal principal
         decimal interest_rate
         int term_months
         decimal monthly_payment
         decimal outstanding_balance
-        string status
-        timestamp created_at
-        timestamp updated_at
+        varchar status
+        timestamp start_date
+        timestamp end_date
     }
 
-    NEXUS_PAYMENT_METHODS {
+    LOAN_SCHEDULES {
+        uuid id PK
+        uuid loan_id FK
+        int payment_number
+        date due_date
+        decimal payment_amount
+        decimal principal_portion
+        decimal interest_portion
+        decimal remaining_balance
+        varchar status
+    }
+
+    PAYMENTS {
         uuid id PK
         uuid user_id FK
-        string provider
-        string provider_id
-        string type
-        string last4
+        varchar payment_type
+        decimal amount
+        char currency
+        varchar status
+        varchar provider
+        varchar provider_reference
+        timestamp created_at
+    }
+
+    PAYMENT_METHODS {
+        uuid id PK
+        uuid user_id FK
+        varchar type
+        varchar provider_token
         boolean is_default
         timestamp created_at
     }
 
-    NEXUS_AUDIT_LOG {
-        uuid id PK
-        uuid user_id FK
-        string action
-        string entity_type
-        uuid entity_id
-        json metadata
-        timestamp created_at
-    }
-
-    NEXUS_USERS ||--o{ NEXUS_ACCOUNTS : owns
-    NEXUS_USERS ||--o{ NEXUS_LOANS : applies
-    NEXUS_USERS ||--o{ NEXUS_PAYMENT_METHODS : has
-    NEXUS_USERS ||--o{ NEXUS_AUDIT_LOG : generates
-    NEXUS_ACCOUNTS ||--o{ NEXUS_TRANSACTIONS : records
+    USERS ||--o{ ACCOUNTS : "owns"
+    ACCOUNTS ||--o{ TRANSACTIONS : "records"
+    USERS ||--o{ AUDIT_LOGS : "generates"
+    USERS ||--o{ LOAN_APPLICATIONS : "submits"
+    LOAN_APPLICATIONS ||--o| LOANS : "becomes"
+    LOANS ||--|{ LOAN_SCHEDULES : "amortises into"
+    USERS ||--o{ PAYMENTS : "makes"
+    USERS ||--o{ PAYMENT_METHODS : "saves"
 ```
 
 ### Tables
 
-| Table | Purpose |
-|-------|---------|
-| `nexus_users` | Core user identity, KYC level, login security, RBAC roles |
-| `nexus_accounts` | Bank accounts (checking/savings/investment/credit) with soft delete |
-| `nexus_transactions` | All money movements: deposits, withdrawals, transfers |
-| `nexus_loans` | Loan applications, repayment tracking, amortization |
-| `nexus_payment_methods` | Stripe payment methods, default card selection |
-| `nexus_audit_log` | Immutable compliance audit trail for all financial actions |
+| Table | Purpose | Key Design Decision |
+|-------|---------|-------------------|
+| `nexus_users` | User accounts with auth, roles, and KYC data | Lockout fields (attempts + locked_until) prevent brute-force without permanent bans |
+| `nexus_accounts` | Bank accounts per user (Checking, Savings, Investment) | Soft delete via `deleted_at` preserves transaction history after account closure |
+| `nexus_transactions` | Immutable financial ledger | Append-only design; no UPDATE after INSERT ensures tamper-proof records |
+| `nexus_audit_logs` | Compliance audit trail for all state changes | Every mutation recorded with IP, timestamp, and before/after diff |
+| `nexus_loan_applications` | Loan application pipeline tracking | State machine: pending → under_review → approved / rejected |
+| `nexus_loans` | Active loan records linked to approved applications | Tracks outstanding balance for repayment status |
+| `nexus_loan_schedules` | Pre-computed monthly amortization schedule | Calculated at loan origination using standard EMI formula |
+| `nexus_payments` | External payment records (Stripe, Plaid) | Provider reference field enables reconciliation and dispute resolution |
+| `nexus_payment_methods` | Saved payment instruments | Stores provider tokens only — raw card data never touches the system |
 
 ### Indexing Strategy
 
-| Table | Index | Reason |
-|-------|-------|--------|
-| `nexus_users` | `email` (unique) | Login lookup |
-| `nexus_users` | `status`, `created_at` | Admin queries, pagination |
-| `nexus_accounts` | `user_id`, `deleted_at` | Per-user account listing |
-| `nexus_transactions` | `account_id`, `created_at DESC` | Transaction history pagination |
-| `nexus_loans` | `user_id`, `status` | Active loan queries |
-
-### Database Optimizations
-- Auto-updated `updated_at` via PostgreSQL trigger (`update_nexus_users_updated_at`)
-- Soft deletes prevent data loss while keeping queries clean via `whereNull('deleted_at')`
-- Redis caching layer sits in front of all read-heavy endpoints (accounts list, analytics)
-- Connection pooling managed by Knex with configurable min/max pool size
+| Index | Table | Columns | Reason |
+|-------|-------|---------|--------|
+| `idx_users_email` | nexus_users | email (unique) | Login lookup — most frequent auth query |
+| `idx_users_status` | nexus_users | status | Filters active-only users across all queries |
+| `idx_accounts_user_id` | nexus_accounts | user_id | Fetching all accounts for a user |
+| `idx_accounts_number` | nexus_accounts | account_number (unique) | Account lookup by number |
+| `idx_transactions_account_id` | nexus_transactions | account_id | Statement generation |
+| `idx_transactions_created_at` | nexus_transactions | created_at | Date range filtering for analytics |
+| `idx_audit_user_id` | nexus_audit_logs | user_id | Compliance queries per user |
+| `idx_loans_user_id` | nexus_loans | user_id | Loan dashboard fetch |
 
 ---
 
 ## 9. API Documentation
 
-### Overview
+### API Overview
 
-All API endpoints are prefixed with `/api/v1/`. Authenticated endpoints require a Bearer JWT token in the `Authorization` header.
-
-### Authentication
-
-```
-Authorization: Bearer <access_token>
-```
-
-Tokens expire after a short window. Use `POST /api/v1/auth/refresh` with the refresh token to obtain a new access token.
+| Attribute | Value |
+|-----------|-------|
+| Base URL | `http://localhost:7008/api/v1` |
+| Authentication | Bearer JWT in `Authorization` header |
+| Content-Type | `application/json` |
+| API Version | v1 |
+| Rate Limiting | Per-route, Redis-backed distributed limits |
+| Request Tracing | `X-Request-ID` header on every response |
 
 ### Endpoints
 
-#### Auth
+#### Authentication
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `POST` | `/api/v1/auth/register` | No | Register new user |
-| `POST` | `/api/v1/auth/login` | No | Login → returns access + refresh tokens |
-| `POST` | `/api/v1/auth/refresh` | No | Refresh access token |
-| `POST` | `/api/v1/auth/logout` | Yes | Revoke tokens |
-| `POST` | `/api/v1/auth/forgot-password` | No | Send reset email |
-| `POST` | `/api/v1/auth/reset-password` | No | Set new password via reset token |
-| `GET`  | `/api/v1/auth/me` | Yes | Get current user profile |
+| Method | Endpoint | Auth Required | Description |
+|--------|----------|:---:|-------------|
+| `POST` | `/auth/register` | No | Create new customer account |
+| `POST` | `/auth/login` | No | Login → returns JWT access + refresh tokens |
+| `POST` | `/auth/refresh` | No | Exchange refresh token for new access token |
+| `POST` | `/auth/logout` | Yes | Revoke session from Redis |
+| `GET` | `/auth/me` | Yes | Return authenticated user profile |
 
 #### Accounts
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `GET`    | `/api/v1/accounts` | Yes | List all user accounts |
-| `GET`    | `/api/v1/accounts/:id` | Yes | Single account detail |
-| `POST`   | `/api/v1/accounts` | Yes | Open new account |
-| `PATCH`  | `/api/v1/accounts/:id` | Yes | Update nickname/settings |
-| `DELETE` | `/api/v1/accounts/:id` | Yes | Close account (soft delete, requires $0 balance) |
-| `GET`    | `/api/v1/accounts/:id/statement` | Yes | Monthly statement PDF |
+| Method | Endpoint | Auth Required | Description |
+|--------|----------|:---:|-------------|
+| `GET` | `/accounts` | Yes | List all accounts for authenticated user |
+| `POST` | `/accounts` | Yes | Open a new bank account |
+| `GET` | `/accounts/:id` | Yes | Get account details and balance |
+| `PATCH` | `/accounts/:id` | Yes | Update account nickname |
+| `DELETE` | `/accounts/:id` | Yes | Close account (soft delete) |
 
 #### Transactions
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `GET`  | `/api/v1/transactions` | Yes | List transactions (filterable, paginated) |
-| `GET`  | `/api/v1/transactions/:id` | Yes | Single transaction detail |
-| `POST` | `/api/v1/transactions/transfer` | Yes | Transfer between accounts |
-| `POST` | `/api/v1/transactions/deposit` | Yes | Deposit funds |
-| `POST` | `/api/v1/transactions/withdrawal` | Yes | Withdraw funds |
+| Method | Endpoint | Auth Required | Description |
+|--------|----------|:---:|-------------|
+| `GET` | `/transactions` | Yes | List transactions (filter, paginate) |
+| `GET` | `/transactions/:id` | Yes | Get single transaction details |
+| `POST` | `/transactions/transfer` | Yes | ACID transfer between two accounts |
+| `POST` | `/transactions/deposit` | Yes | Deposit funds into an account |
+| `POST` | `/transactions/withdrawal` | Yes | Debit / bill payment from an account |
 
 #### Loans
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `GET`  | `/api/v1/loans` | Yes | List user loans |
-| `GET`  | `/api/v1/loans/:id` | Yes | Loan detail + repayment schedule |
-| `POST` | `/api/v1/loans/apply` | Yes | Submit loan application |
-| `GET`  | `/api/v1/loans/:id/schedule` | Yes | Full amortization schedule |
-| `POST` | `/api/v1/loans/:id/payment` | Yes | Make a repayment |
+| Method | Endpoint | Auth Required | Description |
+|--------|----------|:---:|-------------|
+| `GET` | `/loans` | Yes | List all loans and applications |
+| `POST` | `/loans/apply` | Yes | Submit a new loan application |
+| `GET` | `/loans/:id` | Yes | Loan details with amortization schedule |
+| `PATCH` | `/loans/:id` | Yes | Update loan status (admin) |
 
 #### Payments
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `POST`   | `/api/v1/payments/initiate` | Yes | Create Stripe PaymentIntent |
-| `POST`   | `/api/v1/payments/webhook` | No | Receive Stripe webhook events |
-| `GET`    | `/api/v1/payments/methods` | Yes | List saved payment methods |
-| `POST`   | `/api/v1/payments/methods` | Yes | Add payment method |
-| `DELETE` | `/api/v1/payments/methods/:id` | Yes | Remove payment method |
+| Method | Endpoint | Auth Required | Description |
+|--------|----------|:---:|-------------|
+| `GET` | `/payments` | Yes | List payment history |
+| `POST` | `/payments` | Yes | Initiate an external payment |
+| `GET` | `/payments/:id` | Yes | Payment details and status |
 
 #### Analytics
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `GET` | `/api/v1/analytics/summary` | Yes | Net worth, total assets, liabilities |
-| `GET` | `/api/v1/analytics/spending` | Yes | Spending by category with percentages |
-| `GET` | `/api/v1/analytics/cashflow` | Yes | Monthly income vs expenses |
-| `GET` | `/api/v1/analytics/net-worth-history` | Yes | Net worth trend over time |
+| Method | Endpoint | Auth Required | Description |
+|--------|----------|:---:|-------------|
+| `GET` | `/analytics/summary` | Yes | Net worth, total assets, liabilities |
+| `GET` | `/analytics/spending` | Yes | Spending breakdown by category (1–6 months) |
+| `GET` | `/analytics/cashflow` | Yes | Monthly income vs expense trend |
+| `GET` | `/analytics/accounts` | Yes | Per-account performance metrics |
 
-#### Health
+#### System
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `GET` | `/healthz` | No | Overall health (DB + Redis status) |
-| `GET` | `/healthz/live` | No | Liveness probe |
-| `GET` | `/healthz/ready` | No | Readiness probe |
-| `GET` | `/metrics` | No | Prometheus metrics scrape endpoint |
+| Method | Endpoint | Auth Required | Description |
+|--------|----------|:---:|-------------|
+| `GET` | `/healthz/live` | No | Liveness probe (is process running?) |
+| `GET` | `/healthz/ready` | No | Readiness probe (is DB + Redis connected?) |
+| `GET` | `/metrics` | No | Prometheus scrape endpoint |
 
-### Request Example — Login
+### Request & Response Examples
+
+**Login Request:**
 
 ```bash
-curl -X POST http://localhost:7007/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email": "alex.johnson@demo.nexusfinance.io", "password": "password123"}'
+POST /api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "alex.johnson@demo.nexusfinance.io",
+  "password": "password123"
+}
 ```
 
-### Response Example — Login
+**Login Response:**
 
 ```json
 {
-  "accessToken": "eyJhbGciOiJIUzI1NiJ9...",
-  "refreshToken": "eyJhbGciOiJIUzI1NiJ9...",
   "user": {
-    "id": "uuid",
+    "id": "3f7a1d2e-...",
     "email": "alex.johnson@demo.nexusfinance.io",
     "firstName": "Alex",
     "lastName": "Johnson",
     "roles": ["customer"],
-    "kycLevel": 2
-  }
+    "kycLevel": 1
+  },
+  "accessToken": "eyJhbGciOiJIUzI1NiJ9...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiJ9..."
 }
 ```
 
-### Error Handling
+**Fund Transfer Request:**
 
-All errors follow a consistent envelope:
+```bash
+POST /api/v1/transactions/transfer
+Authorization: Bearer eyJhbGci...
+Content-Type: application/json
+
+{
+  "fromAccountId": "uuid-checking-account",
+  "toAccountId": "uuid-savings-account",
+  "amount": 500.00,
+  "description": "Monthly savings transfer"
+}
+```
+
+**Transfer Response:**
+
+```json
+{
+  "transactionId": "uuid-tx-here",
+  "status": "completed",
+  "amount": 500.00
+}
+```
+
+### Error Response Format
+
+All errors return a consistent envelope:
 
 ```json
 {
   "error": {
-    "code": "NOT_FOUND",
-    "message": "Account not found",
-    "statusCode": 404,
-    "requestId": "389559da-de18-435a-8973-2d0a80ed001b"
+    "code": "INSUFFICIENT_FUNDS",
+    "message": "Insufficient funds in account",
+    "statusCode": 422,
+    "requestId": "req-uuid-here",
+    "timestamp": "2026-01-01T10:00:00.000Z"
   }
 }
 ```
 
-| HTTP Status | Code | Meaning |
-|-------------|------|---------|
-| 400 | `VALIDATION_ERROR` | Invalid request body or params |
-| 401 | `UNAUTHORIZED` | Missing or invalid JWT |
-| 403 | `FORBIDDEN` | Insufficient permissions |
-| 404 | `NOT_FOUND` | Resource does not exist |
-| 409 | `CONFLICT` | Duplicate resource (e.g. email already registered) |
-| 422 | `BUSINESS_RULE_ERROR` | Business rule violation (e.g. insufficient balance) |
-| 429 | `RATE_LIMITED` | Too many requests |
-| 500 | `INTERNAL_ERROR` | Unexpected server error |
+| HTTP Code | Error Code | When Triggered |
+|-----------|-----------|---------------|
+| `400` | `VALIDATION_ERROR` | Invalid request body fields |
+| `401` | `UNAUTHORIZED` | Missing, expired, or invalid JWT |
+| `403` | `FORBIDDEN` | Insufficient role or KYC level |
+| `404` | `NOT_FOUND` | Resource does not exist |
+| `409` | `CONFLICT` | Email already registered |
+| `422` | `BUSINESS_RULE_ERROR` | Insufficient funds, account closed |
+| `429` | `RATE_LIMIT_EXCEEDED` | Too many requests on this route |
+| `451` | `COMPLIANCE_ERROR` | AML/KYC restriction |
 
 ---
 
 ## 10. Security Implementation
 
-### Authentication & Authorization
-- **JWT Access + Refresh Tokens** — short-lived access tokens with longer-lived refresh tokens stored securely
-- **bcryptjs** — passwords hashed with cost factor 10 (≈100ms per hash, brute-force resistant)
-- **RBAC** — roles stored as JSON array on user record (`["customer"]`, `["admin"]`)
-- **Passport.js** — extensible auth strategy layer; supports Google, GitHub, Microsoft OAuth
+### Defense-in-Depth Model
 
-### API Security
-- **Helmet.js** — sets 11 security HTTP headers (CSP, HSTS, X-Frame-Options, etc.)
-- **CORS** — explicit allow-list of origins (localhost:3002, production domain)
-- **Rate Limiting** — per-IP throttling on all endpoints, stricter limits on `/auth/login`
-- **Request Validation** — Joi schema validation on all POST/PATCH bodies; invalid input returns 400
+```mermaid
+flowchart TB
+    subgraph L1["Layer 1 — Network Perimeter"]
+        VPC["AWS VPC — Three-Tier Subnets"]
+        SG["Security Groups — Port Allowlisting"]
+    end
+    subgraph L2["Layer 2 — Transport Security"]
+        TLS["HTTPS / TLS Termination at ALB"]
+        HSTS["HSTS — max-age 1 Year + Preload"]
+    end
+    subgraph L3["Layer 3 — Application Hardening"]
+        HELM["Helmet.js — CSP, XFO, XCTO"]
+        RL["Redis Rate Limiting — Per Route"]
+        JOI["Joi Schema Validation — All Inputs"]
+        CORS["CORS — Allowlisted Origins Only"]
+    end
+    subgraph L4["Layer 4 — Authentication & Sessions"]
+        JWT["JWT — 15-min Access Tokens"]
+        REF["Refresh Token — 30-day, Redis-tracked"]
+        LOCK["Account Lockout — 5 attempts / 30 min"]
+    end
+    subgraph L5["Layer 5 — Data Integrity"]
+        BCR["bcrypt — Cost Factor 12"]
+        UUID["UUID PKs — Non-enumerable"]
+        DEC["DECIMAL(19,4) — No Float Errors"]
+        SOFT["Soft Delete — No Data Loss"]
+    end
 
-### Account Security
-- **Login lockout** — `failed_login_attempts` counter; account locked via `locked_until` timestamp
-- **Soft delete** — users and accounts never hard-deleted; `deleted_at` timestamp preserves audit trail
-- **KYC levels** — 0 (unverified) to 3 (fully verified); higher levels unlock higher transaction limits
+    L1 --> L2 --> L3 --> L4 --> L5
+```
 
-### Transaction Limits
+### JWT Token Lifecycle
 
-| Limit Type | Value |
-|------------|-------|
-| Single transaction | $10,000 |
-| Daily | $50,000 |
-| Weekly | $200,000 |
-| Monthly | $500,000 |
+| Token | Expiry | Storage | Refresh |
+|-------|--------|---------|---------|
+| Access Token | 15 minutes | `localStorage` | Via refresh endpoint |
+| Refresh Token | 30 days | `localStorage` | — |
+| Session (Redis) | 7 days | Server-side Redis | Cleared on logout |
 
-### Secrets Management
-- All credentials stored in `.env` (never committed to git)
-- Kubernetes Secrets for production (base64-encoded, RBAC-controlled)
-- TruffleHog secret scanning runs in every CI pipeline execution
+### Rate Limiting Configuration
 
-### Compliance
-- **KYC tracking** — `kyc_level` field on every user record
-- **AML** — AML flag support in data model
-- **Fraud scoring** — `fraud_score` field enabled in app-config
-- **Audit log** — `nexus_audit_log` table records every financial action immutably
+| Route | Limit | Window | Block Duration |
+|-------|-------|--------|----------------|
+| `POST /auth/login` | 5 requests | 1 minute | 2 minutes |
+| `POST /auth/register` | 10 requests | 1 minute | 2 minutes |
+| `POST /transactions/*` | 30 requests | 1 minute | 2 minutes |
+| `POST /payments` | 10 requests | 1 minute | 2 minutes |
+| All other routes | 100 requests | 1 minute | 2 minutes |
+
+### HTTP Security Headers
+
+| Header | Configured Value | Threat Mitigated |
+|--------|-----------------|-----------------|
+| `Content-Security-Policy` | `default-src 'self'` | XSS, data injection |
+| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains; preload` | SSL stripping |
+| `X-Frame-Options` | `DENY` | Clickjacking |
+| `X-Content-Type-Options` | `nosniff` | MIME type sniffing |
+| `Referrer-Policy` | `no-referrer` | Information leakage |
+
+### RBAC & KYC Middleware
+
+```typescript
+// Role-based access — only admins reach the audit trail
+router.get('/audit', requireRole('admin'), auditHandler)
+
+// KYC-level gating — Level 2+ required for high-value transfers
+router.post('/transfer', requireKyc(2), transferHandler)
+```
 
 ---
 
 ## 11. CI/CD Pipeline
 
-### Pipeline Overview
+### Pipeline Flow
 
 ```mermaid
-flowchart TB
-    subgraph CI["CI — Runs on every PR and push to main"]
-        L["1. Lint\nESLint (max-warnings: 0)"]
-        T["2. Type Check\ntsc --noEmit"]
-        UT["3. Unit + Integration Tests\nJest + real PostgreSQL + Redis"]
-        S["4. Security Scan\nyarn audit + TruffleHog"]
-        B["5. Docker Build\nBackend + Frontend images\nTagged: sha-commit"]
-        P["6. Push to Registry\nghcr.io"]
+flowchart LR
+    subgraph Developer
+        PUSH["git push\nto main / develop"]
     end
 
-    subgraph CD_Stage["CD Staging — Auto-deploy on main merge"]
-        MS["Run DB Migrations"]
-        DS["kubectl set image\n(rolling update)"]
-        WS["Wait for rollout\n(300s timeout)"]
-        SS["Smoke Test\nGET /healthz/ready"]
-        NS["Slack Notify"]
+    subgraph CI["CI — GitHub Actions (on push / PR)"]
+        LINT["1. ESLint\nMax 0 warnings"]
+        TYPE["2. TypeScript\ntsc --noEmit"]
+        TEST["3. Jest Tests\npassWithNoTests"]
+        SEC["4. Yarn Audit\nSecurity scan"]
+        BUILD["5. Build\nTS + React"]
+        DOCK["6. Docker Build\nMulti-stage image"]
     end
 
-    subgraph CD_Prod["CD Production — Requires manual approval gate"]
-        MP["Run DB Migrations"]
-        DP["kubectl rolling update\n(maxUnavailable=0)"]
-        WP["Wait for rollout"]
-        SP["Smoke Test"]
-        RB["Auto Rollback\non smoke failure"]
-        GR["GitHub Release\nv run-number"]
-        NP["Slack Notify"]
+    subgraph CD["CD — GitHub Actions (on main merge)"]
+        STAGE["7. Staging Deploy\nEKS Rolling Update"]
+        SMOKE["8. Smoke Tests\n/healthz/ready"]
+        GATE["9. Manual Approval\nRequired"]
+        PROD["10. Production Deploy\nEKS Rolling Update"]
+        REL["11. GitHub Release\nVersion Tag"]
+        NOTIFY["12. Slack Notification\nSuccess / Failure"]
     end
 
-    L --> T --> UT --> S --> B --> P
-    P --> MS --> DS --> WS --> SS --> NS
-    NS --> Approval["Manual Approval Gate"]
-    Approval --> MP --> DP --> WP --> SP
-    SP --> RB
-    SP --> GR --> NP
+    PUSH --> LINT --> TYPE --> TEST --> SEC --> BUILD --> DOCK
+    DOCK --> STAGE --> SMOKE --> GATE --> PROD --> REL --> NOTIFY
 ```
 
-### Key Pipeline Design Decisions
+### CI Jobs
 
-| Decision | Rationale |
-|----------|-----------|
-| Integration tests against real DB | Mock databases can mask migration failures; a real DB catches schema bugs |
-| TruffleHog in CI | Prevents secrets from ever reaching the container registry |
-| Manual approval gate to production | High-stakes financial data — no unreviewed code reaches production automatically |
-| Auto-rollback on smoke failure | Mean time to recovery under 5 minutes when a bad deploy is caught |
-| Image tagged with `sha-<commit>` | Exact traceability from a running production pod back to its source commit |
+| Job | Tool | Failure Behaviour |
+|-----|------|------------------|
+| Lint | ESLint (max 0 warnings) | Blocks merge |
+| Type Check | `tsc --noEmit` | Blocks merge |
+| Tests | Jest with `--passWithNoTests` | Blocks merge |
+| Security Audit | `yarn npm audit` | Advisory only |
+| Build Backend | `tsc --project tsconfig.json` | Blocks merge |
+| Build Frontend | `react-scripts build` | Blocks merge |
+| Docker Build | Multi-stage build verification | Blocks merge |
+
+### Deployment Strategy
+
+```yaml
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1          # One extra pod spun up during update
+    maxUnavailable: 0    # Never remove a pod before the new one passes readiness
+```
+
+Database migrations are applied **before** the new code version is deployed — ensuring backward compatibility during the rolling window when both old and new pods coexist.
 
 ---
 
@@ -729,112 +947,114 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    subgraph Internet
-        Users["End Users"]
-        Stripe["Stripe API"]
-    end
+    Internet["Internet Traffic"]
 
-    subgraph AWS["AWS — us-east-1"]
-        subgraph Public["Public Subnets (3 AZs)"]
-            ALB["Application\nLoad Balancer"]
-            NAT["NAT Gateway"]
+    subgraph AWS["AWS Cloud — us-east-1"]
+        subgraph Public["Public Subnets 10.0.1-3.0/24"]
+            ALB["Application Load Balancer\nSSL Termination"]
+            NAT["NAT Gateway + Elastic IP"]
         end
 
-        subgraph Private["Private Subnets (3 AZs)"]
-            subgraph EKS["EKS Cluster"]
-                subgraph Pods["Backend Pods (3 to 20)"]
-                    P1["Pod 1"]
-                    P2["Pod 2"]
-                    P3["Pod 3+"]
-                end
-                HPA["HPA\nCPU > 70%\nMemory > 80%"]
+        subgraph Private["Private Subnets 10.0.10-12.0/24"]
+            subgraph EKS["EKS Managed Node Group"]
+                BE["Backend Pods\n3–20 (HPA)"]
+                FE["Frontend Pods\n(Nginx)"]
             end
         end
 
-        subgraph Isolated["Isolated Subnets (3 AZs — no internet route)"]
-            RDS["RDS PostgreSQL\nMulti-AZ"]
-            EC["ElastiCache Redis\nCluster Mode"]
+        subgraph Isolated["Isolated Subnets 10.0.20-22.0/24"]
+            RDS["RDS PostgreSQL 15\nMulti-AZ Standby"]
+            CACHE["ElastiCache Redis 7\nCluster Mode"]
         end
 
-        S3["S3\nDocuments + Backups"]
+        subgraph Storage["Storage"]
+            S3A["S3 — Documents Bucket"]
+            S3B["S3 — Backups Bucket"]
+        end
     end
 
-    Users --> ALB
-    ALB --> Pods
-    Pods --> RDS
-    Pods --> EC
-    Pods --> Stripe
-    Pods --> S3
-    Pods --> NAT
-    NAT --> Internet
-    HPA -.->|scales| Pods
+    Internet --> ALB
+    ALB --> FE & BE
+    BE --> RDS & CACHE & S3A
+    Private --> NAT --> Internet
 ```
 
-### Kubernetes Resource Summary
+### Kubernetes Resource Specifications
 
-| Resource | Configuration |
+| Resource | Specification |
 |----------|--------------|
-| Deployment replicas | Min: 3, Max: 20 (HPA-controlled) |
-| Update strategy | RollingUpdate (maxSurge: 1, maxUnavailable: 0) |
-| CPU request / limit | 250m / 1000m |
-| Memory request / limit | 512Mi / 1Gi |
-| Liveness probe | HTTP GET /healthz/live (30s delay, 15s interval) |
-| Readiness probe | HTTP GET /healthz/ready (10s delay) |
-| Startup probe | 30 retries × 10s = 5 min maximum startup window |
-| Pod security | runAsNonRoot: true, runAsUser: 1001 |
-| Topology spread | Spread across 3 AZs to eliminate zone single point of failure |
+| Deployment Replicas | 3 (minimum for HA) |
+| Max Replicas (HPA) | 20 |
+| HPA CPU Threshold | 70% average utilisation |
+| HPA Memory Threshold | 80% average utilisation |
+| CPU Request | 250m |
+| CPU Limit | 1000m (1 vCPU) |
+| Memory Request | 512Mi |
+| Memory Limit | 1Gi |
+| Liveness Probe | `GET /healthz/live` — 15s interval, 3 failures = restart |
+| Readiness Probe | `GET /healthz/ready` — 10s interval, 3 failures = remove from LB |
+| Startup Probe | 30 polls × 10s = 5-minute budget for cold start |
+| Termination Grace Period | 30 seconds |
+| Security Context | `runAsUser: 1001` (non-root container) |
 
-### Terraform VPC Layout
+### Terraform Modules
 
-| Subnet Type | CIDR Range | Purpose |
-|-------------|------------|---------|
-| Public (×3) | 10.0.1–3.0/24 | ALB, NAT Gateway |
-| Private (×3) | 10.0.10–12.0/24 | EKS worker nodes |
-| Isolated (×3) | 10.0.20–22.0/24 | RDS, ElastiCache (no internet route) |
+| Module | AWS Resources Provisioned |
+|--------|--------------------------|
+| `vpc` | VPC (10.0.0.0/16), 9 subnets across 3 AZs, Internet Gateway, NAT Gateway, route tables |
+| `eks` | EKS cluster, managed node groups, IAM roles, OIDC provider |
+| `rds` | RDS PostgreSQL Multi-AZ, parameter group, subnet group, security group |
+| `redis` | ElastiCache Redis cluster, subnet group, security group |
+| `s3` | Documents bucket, backups bucket, lifecycle policies, bucket policies |
 
 ---
 
 ## 13. Monitoring & Logging
 
-### Metrics Collection
+### Observability Architecture
 
-Prometheus scrapes the backend at `/metrics` every 15 seconds with a 30-day retention window.
+```mermaid
+flowchart LR
+    APP["NexusFinance Backend\n(All Pods)"]
 
-| Scrape Target | Port | Metrics Collected |
-|---------------|------|-------------------|
-| NexusFinance Backend | 7007 | HTTP latency, error rates, active connections |
-| PostgreSQL Exporter | 9187 | DB connections, query times, table sizes |
-| Redis Exporter | 9121 | Memory usage, hit/miss ratio, command counts |
-| Kubernetes Pods | Auto-discovery | CPU, memory, restart counts |
+    APP -->|"GET /metrics\n15s scrape"| PROM["Prometheus\nTime-Series Store"]
+    PROM -->|"Query"| GRAF["Grafana\nDashboards"]
+    PROM -->|"Alert Rules"| ALERT["AlertManager\nPagerDuty / Slack"]
+    APP -->|"Uncaught exceptions\nTransaction traces"| SENT["Sentry\nError Platform"]
+    APP -->|"Spans + Traces"| DD["Datadog APM"]
+    APP -->|"Structured JSON\nto stdout"| LOGS["Log Aggregator\n(CloudWatch / ELK)"]
+```
 
-### Alert Rules
+### Custom Business Metrics
 
-| Severity | Alert | Trigger Condition |
-|----------|-------|-------------------|
-| Critical | `BackendDown` | Backend unreachable for > 1 minute |
-| Critical | `HighErrorRate` | 5xx error rate > 5% |
-| Critical | `PaymentAPISlowdown` | P95 latency > 5 seconds |
-| Critical | `HighFraudAlertRate` | > 10 fraud alerts per second |
-| Warning | `HighAPILatency` | P95 latency > 2 seconds |
-| Warning | `HighMemoryUsage` | Pod memory > 90% |
-| Warning | `DatabaseConnectionPoolExhausted` | Active connections > 40 |
-| Warning | `RedisMemoryHigh` | Redis memory > 85% |
-| Warning | `TransactionVolumeDrop` | 50% below the 24-hour baseline |
+| Metric Name | Type | Labels | What It Measures |
+|-------------|------|--------|-----------------|
+| `nexusfinance_http_request_duration_seconds` | Histogram | method, route, status_code | API latency by endpoint — feeds SLO dashboards |
+| `nexusfinance_transactions_total` | Counter | type, currency, status | Transaction throughput by type and outcome |
+| `nexusfinance_active_sessions` | Gauge | — | Number of concurrent authenticated sessions |
+| `nexusfinance_fraud_alerts_total` | Counter | severity | Fraud detection rate over time |
+| `nexusfinance_loan_approval_rate_percent` | Gauge | — | Credit underwriting efficiency KPI |
+| `nexusfinance_payment_volume_usd_total` | Counter | provider | Revenue-linked payment volume tracking |
 
-### Alert Routing
-- **Critical** → PagerDuty (immediate on-call page) + Slack `#alerts-critical`
-- **Warning** → Slack `#alerts-warning`
-- **Resolved** → Slack notification with resolution timestamp
+### Prometheus Alert Rules
+
+| Alert Name | Trigger Condition | Severity | Response |
+|-----------|------------------|----------|---------|
+| `HighErrorRate` | 5xx errors > 5% of requests for 5m | Critical | Page on-call engineer |
+| `SlowAPIResponse` | p99 latency > 2s for 5 minutes | Warning | Investigate DB / cache |
+| `PodCrashLoop` | CrashLoopBackOff detected | Critical | Auto-rollback deployment |
+| `HighMemoryUsage` | Pod memory > 85% for 10 minutes | Warning | Review HPA scaling |
+| `DBConnectionPoolExhausted` | Pool exhausted > 2 minutes | Critical | Page database team |
+| `RateLimitSpike` | 429 responses > 100/min | Warning | Review for DDoS patterns |
 
 ### Logging Strategy
 
-| Aspect | Implementation |
-|--------|---------------|
-| Format | Structured JSON (Winston) |
-| Standard fields | `service`, `env`, `version`, `requestId` on every line |
-| Trace correlation | Datadog `dd.trace_id` + `dd.span_id` embedded in every log entry |
-| Error tracking | Sentry captures stack traces, user context, and environment tag |
-| HTTP access log | Morgan logs every request with method, path, status, response time |
+| Layer | Tool | Format | Purpose |
+|-------|------|--------|---------|
+| Application | Winston | Structured JSON with `requestId`, `userId`, level | Correlated log search across pods |
+| HTTP Access | Morgan | Combined format (IP, method, path, status, duration) | Request audit trail |
+| Kubernetes | Container stdout | JSON captured by node agent | Centralised aggregation |
+| Infrastructure | AWS CloudWatch | VPC flow logs, EKS control plane | Network and cluster audit |
 
 ---
 
@@ -842,165 +1062,245 @@ Prometheus scrapes the backend at `/metrics` every 15 seconds with a 30-day rete
 
 ### Prerequisites
 
-| Tool | Version | Purpose |
-|------|---------|---------|
-| Node.js | 18.x | Runtime (via nvm recommended) |
-| Yarn | 4.x | Package manager |
-| Docker | Latest | Run Postgres + Redis locally |
-| Docker Compose | Latest | Multi-container local setup |
-| nvm | Latest | Node version management |
+| Tool | Minimum Version | Install Check |
+|------|----------------|---------------|
+| Node.js | 18.x LTS | `node --version` |
+| Yarn | 4.x (Berry) | `yarn --version` |
+| Docker Desktop | Latest stable | `docker --version` |
+| nvm | Any | `nvm --version` |
+| AWS CLI | 2.x (for EKS) | `aws --version` |
+| kubectl | 1.27+ (for K8s) | `kubectl version` |
+| Terraform | 1.5+ (for IaC) | `terraform --version` |
 
-### Clone Repository
+### Clone the Repository
 
 ```bash
-git clone <repository-url>
-cd "Project 1"
+git clone https://github.com/Skillfyme-R/DevOps-Capstone-Projects.git
+cd "DevOps-Capstone-Projects/Project 1"
 ```
 
 ### Environment Variables
 
-Create a `.env` file in the project root:
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your local values:
 
 ```env
 # Database
-DATABASE_URL=postgresql://nexus_user:nexus_dev_password@localhost:5432/nexusfinance_dev
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=nexusfinance_dev
-DB_USER=nexus_user
-DB_PASSWORD=nexus_dev_password
+NEXUS_DB_HOST=localhost
+NEXUS_DB_PORT=5432
+NEXUS_DB_USER=nexus
+NEXUS_DB_PASSWORD=nexus_dev_password
+NEXUS_DB_NAME=nexusfinance_dev
 
-# Redis
-REDIS_URL=redis://localhost:6380
+# Cache
+NEXUS_REDIS_URL=redis://localhost:6380
 
-# Auth
-JWT_SECRET=your-super-secret-jwt-key-change-in-production
-JWT_REFRESH_SECRET=your-refresh-secret-key
-JWT_EXPIRY=15m
-JWT_REFRESH_EXPIRY=7d
+# Security
+NEXUS_BACKEND_SECRET=your-jwt-secret-minimum-32-characters-long
+NEXUS_SESSION_SECRET=your-session-secret-here
 
-# Server
-PORT=7007
-NODE_ENV=development
-CORS_ORIGIN=http://localhost:3002
-
-# Stripe (optional for local)
-STRIPE_SECRET_KEY=sk_test_...
-STRIPE_WEBHOOK_SECRET=whsec_...
+# Environment
+NEXUS_ENVIRONMENT=development
 ```
 
-### Installation & Run
+### Step-by-Step Local Setup
 
-**Terminal 1 — Start infrastructure (Postgres + Redis):**
+**Step 1 — Enable Corepack and select Node 18**
+
 ```bash
+corepack enable
 source "$HOME/.nvm/nvm.sh" && nvm use 18
-cd "Project 1"
-yarn infra:up
 ```
 
-**Terminal 2 — Install dependencies, run migrations, seed data, start app:**
+**Step 2 — Install all workspace dependencies**
+
 ```bash
-source "$HOME/.nvm/nvm.sh" && nvm use 18
-cd "Project 1"
-yarn install
+yarn install --no-immutable
+```
+
+**Step 3 — Start PostgreSQL and Redis via Docker**
+
+```bash
+docker compose -f infrastructure/docker/docker-compose.infra.yml up -d
+
+# Verify both containers are running
+docker compose -f infrastructure/docker/docker-compose.infra.yml ps
+```
+
+**Step 4 — Run database migrations and seed demo data**
+
+```bash
 yarn db:migrate
 yarn db:seed
+```
+
+**Step 5 — Start the backend API** (new terminal)
+
+```bash
+cd packages/backend
+source "$HOME/.nvm/nvm.sh" && nvm use 18
+yarn start:dev
+```
+
+Expected output:
+```
+✓ NexusFinance API listening on http://0.0.0.0:7008
+✓ Environment: development
+✓ Database: nexusfinance_dev
+```
+
+**Step 6 — Start the React frontend** (new terminal)
+
+```bash
+cd packages/app
+source "$HOME/.nvm/nvm.sh" && nvm use 18
 yarn start
+```
+
+Expected output:
+```
+Compiled successfully!
+Local: http://localhost:3003
 ```
 
 ### Access Points
 
-| Service | URL | Notes |
-|---------|-----|-------|
-| Frontend | http://localhost:3002 | React app |
-| Backend API | http://localhost:7007 | Express REST API |
-| Health Check | http://localhost:7007/healthz | DB + Redis status |
-| Metrics | http://localhost:7007/metrics | Prometheus scrape |
-| Adminer (DB UI) | http://localhost:8080 | `nexus_user` / `nexus_dev_password` |
-| Grafana | http://localhost:4000 | `admin` / `nexus_grafana_admin` |
-| Prometheus | http://localhost:9090 | Raw metrics explorer |
+| URL | Description |
+|-----|-------------|
+| `http://localhost:3003` | React frontend application |
+| `http://localhost:7008/healthz/live` | Backend liveness check |
+| `http://localhost:7008/healthz/ready` | Backend readiness check |
+| `http://localhost:7008/metrics` | Prometheus metrics endpoint |
 
-### Demo Login Credentials
+### Demo Credentials
 
-```
-Email:    alex.johnson@demo.nexusfinance.io
-Password: password123
-```
+| Role | Email | Password |
+|------|-------|----------|
+| Customer | `alex.johnson@demo.nexusfinance.io` | `password123` |
 
-### Verification Steps
+### Full Docker Stack (Including Monitoring)
 
 ```bash
-# 1. Health check — should return { status: "ok" }
-curl http://localhost:7007/healthz
+docker compose -f infrastructure/docker/docker-compose.yml up -d
+```
 
-# 2. Login test — should return accessToken + user object
-curl -X POST http://localhost:7007/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"alex.johnson@demo.nexusfinance.io","password":"password123"}'
+| Service | URL | Credentials |
+|---------|-----|-------------|
+| Frontend | `http://localhost:3000` | — |
+| Backend API | `http://localhost:7008` | — |
+| Prometheus | `http://localhost:9090` | — |
+| Grafana | `http://localhost:4000` | admin / admin |
+| Adminer (DB UI) | `http://localhost:8080` | See .env |
 
-# 3. Readiness probe
-curl http://localhost:7007/healthz/ready
+### Kubernetes Deployment
+
+```bash
+# Set up AWS credentials and EKS context
+aws configure
+aws eks update-kubeconfig --region us-east-1 --name nexusfinance-production
+
+# Deploy to cluster
+kubectl apply -k infrastructure/kubernetes/overlays/prod
+
+# Monitor rollout
+kubectl rollout status deployment/nexusfinance-backend -n nexusfinance
+```
+
+### Terraform Infrastructure Provisioning
+
+```bash
+cd infrastructure/terraform/environments/dev
+terraform init
+terraform plan -out=tfplan
+terraform apply tfplan
 ```
 
 ---
 
-## 16. Challenges & Learnings
+## 15. Challenges & Learnings
 
 ### Technical Challenges
 
-| Challenge | Root Cause | Solution Applied |
-|-----------|-----------|-----------------|
-| Yarn Berry PnP module resolution | PnP does not use `node_modules` — some tools fail silently | Configured `.yarnrc.yml`; verified PnP compatibility for every tool |
-| Knex migrations failing with TypeScript | `ts-node` not registered at runtime; Knex executes files as plain JS | Rewrote all migration files as plain `.js` |
-| CORS blocking frontend requests | Port 3002 not in Express allow-list | Added explicit origin allow-list to CORS middleware |
-| Redis port conflict on local machine | Local Redis on 6379 clashed with Docker Redis container | Mapped Docker Redis to host port 6380 |
-| API returning snake_case, frontend expecting camelCase | Database columns snake_case; TypeScript interfaces camelCase | Explicit field mapping in `/auth/me` route response |
-| React Query serving stale data after mutations | Default `staleTime` too high; cached data shown after create/delete | Set `staleTime: 0` globally; used `removeQueries` after destructive operations |
-| Recharts pie chart rendering empty | API returns numeric amounts as strings; Recharts requires numbers | Added `parseFloat()` mapping before passing data to chart components |
-| Future dates in seeded transaction data | Random day 1–28 generated without bounding to current month | Capped max day to `today.getDate()` when `monthOffset === 0` |
-| Account detail page showing wrong account | React Query served cached data from previously viewed account | Set `cacheTime: 0, staleTime: 0` on per-account queries keyed by ID |
-| Backend not loading environment variables | `dotenv.config()` called after module imports that needed env vars | Moved `dotenv.config()` to the very first line of `index.ts` before all imports |
+| Challenge | Root Cause | Resolution |
+|-----------|-----------|-----------|
+| Yarn Berry PnP failing in GitHub Actions CI | Actions runners do not have `corepack` enabled by default | Added explicit `corepack enable` step before all `yarn` commands in every CI job |
+| Redis cache returning stale balances after delete/deposit | Cache not invalidated on write operations | Added `cache.del(CACHE_KEY)` immediately after every mutation in backend route handlers |
+| React Query serving stale account data across page navigation | Default `staleTime` caused cached responses to persist in memory across routes | Set `staleTime: 0, cacheTime: 0, refetchOnMount: true` on all financial data queries |
+| Webpack chunk crash: `Cannot read properties of undefined (reading 'call')` | JSX elements (`<Icon />`) used in module-level constant arrays run `React.createElement` before React initialises in split chunks | Replaced JSX instances with component class references in constants; render with `<cat.Icon />` inside component functions |
+| Spending chart rendering empty | API returns all monetary amounts as strings; Recharts requires numbers | Added `parseFloat()` on all amount fields before mapping to chart data structures |
+| TypeScript compilation errors on API response types | Frontend interfaces didn't match actual API response shape | Defined explicit response interfaces (`SpendingResponse`, `SpendingChartItem`) matching exact API payload |
+| Pay Bill and Send Money showing identical UI | Both quick actions navigated to `/payments` with no differentiation | Introduced `?tab=bill` URL query parameter; each flow conditionally renders only its own form — no shared tab bar |
+| Git submodule conflict preventing push | Inner `.git` folder in Project 1 created a nested repository | Removed inner `.git`, ran `git rm --cached "Project 1"` then re-added as regular tracked files |
 
-### Architecture Challenges
-- **Monorepo with Yarn Berry PnP** required careful workspace configuration to share TypeScript types between frontend and backend packages without duplicating definitions
-- **Cache invalidation design** — mapping which React Query keys must be invalidated after each mutation (deposit, transfer, account close) required tracing the full data dependency graph across pages
+### Architecture Challenges & Decisions
 
-### Key Learnings
+| Decision Point | Option Chosen | Rationale |
+|---------------|--------------|-----------|
+| Repository structure | Yarn Berry monorepo with workspaces | Shared TypeScript types, unified CI pipeline, single dependency lock file |
+| Backend extensibility | Plugin-based Express route modules | Each domain (auth, accounts, loans) is independently testable and can be extracted to a microservice |
+| Authentication | Stateless JWT + Redis session tracking | Horizontal scaling without sticky sessions; Redis enables instant logout and token revocation |
+| Data deletion | Soft delete via `deleted_at` timestamp | Transaction history is preserved post-closure; regulatory compliance requires immutable records |
+| Currency storage | `DECIMAL(19,4)` in PostgreSQL | Float arithmetic introduces rounding errors that compound across millions of transactions |
 
-1. **Integration tests beat mocks** — mocked database tests passed while a real migration broke in production; always test against a real database instance
-2. **Cache invalidation is non-trivial in financial apps** — every mutation must identify and invalidate all dependent cache keys, or users see stale balances and transaction lists
-3. **Import order matters with dotenv** — Node.js caches modules on first import; `dotenv.config()` must run before any module that reads `process.env`
-4. **YAML is whitespace-sensitive** — a missing space after a colon (`webhookSecret:${VAR}`) causes a silent parse failure; always validate config files with a YAML linter
-5. **Structured logging pays dividends immediately** — embedding `requestId` and `trace_id` in every log line reduced mean time to diagnose cross-service issues from hours to minutes
-6. **Health probes are not optional** — without accurate readiness probes, Kubernetes routes live traffic to pods still initializing, causing cascading failures during rolling deploys
+### Performance Challenges
+
+| Challenge | Solution | Measured Improvement |
+|-----------|---------|---------------------|
+| Analytics aggregation slow on large transaction tables | Redis cache with 5-minute TTL on all summary endpoints | ~200ms DB query → sub-10ms cache hit |
+| Balance reads on every page navigation | Per-account cache key with invalidation on write | Eliminated redundant DB round-trips for unchanged balances |
+| Dashboard re-renders causing API floods | React Query with `refetchOnWindowFocus: true` and deduplication | Single request per focus event; no duplicate concurrent calls |
+
+### Key Engineering Learnings
+
+- **Monetary precision is non-negotiable**: `DECIMAL(19,4)` vs `FLOAT` is not a performance trade-off — it is a correctness requirement. Floating-point rounding errors in financial systems lead to real money discrepancies.
+- **Cache invalidation discipline**: Caching without explicit invalidation creates silent correctness bugs. Every write operation must identify and clear all affected cache keys.
+- **Graceful shutdown in containers**: Kubernetes sends `SIGTERM` before killing a pod. Without a 30-second grace period, in-flight payment and transfer requests are dropped mid-transaction.
+- **Module-level JSX is a webpack anti-pattern**: JSX is syntactic sugar for `React.createElement`. In webpack code-split chunks, calling it at module initialisation runs before React is available. Component class references must be used in constants; JSX only inside render functions.
+- **Separate concerns at the URL level**: Using `?tab=bill` to differentiate Pay Bill from Send Money keeps routing clean, supports deep-linking, and eliminates shared state between two functionally distinct flows.
+- **Migrations before code deployment**: In a rolling update, both old and new pod versions run simultaneously. Migrations must be backward-compatible with the previous code version during the rollout window.
 
 ---
 
-## 17. Future Enhancements
+## 16. Future Enhancements
 
 | Enhancement | Description | Business Impact |
-|-------------|-------------|-----------------|
-| **2FA / MFA** | TOTP-based two-factor authentication (Google Authenticator) | Significantly reduces account takeover risk |
-| **Real-Time Notifications** | WebSocket push for transactions, balance changes, and alerts | Customers get instant visibility into account activity |
-| **AI Spending Insights** | ML model to categorize transactions and flag unusual spending patterns | Proactive financial health advice drives engagement and retention |
-| **Mobile App** | React Native sharing the same backend API | Reach mobile-first banking customers without duplicating business logic |
-| **Open Banking / Plaid** | Connect external bank accounts via Plaid API | Complete financial picture across all institutions a customer holds |
-| **Scheduled Payments** | Recurring transfer automation via node-cron | Automates bill payments and savings contributions |
-| **Statement PDF Export** | Downloadable PDF account statements with branded formatting | Replaces manual bank statement requests |
-| **Multi-tenant / White-label** | Data isolation per organization; custom branding per tenant | Platform-as-a-service revenue model for B2B clients |
-| **Service Mesh (Istio)** | mTLS between services, traffic shaping, circuit breaking | Zero-trust networking and fine-grained traffic control |
-| **Event Sourcing (Kafka)** | Event bus for transaction events and audit replay | Full audit replay capability; real-time downstream consumers |
-| **GraphQL Gateway** | GraphQL API layer over existing REST services | Flexible client queries; eliminates over-fetching on mobile |
-| **Biometric Auth (WebAuthn)** | FIDO2 fingerprint and face login | Passwordless authentication for mobile and desktop users |
+|-------------|-------------|----------------|
+| Google / GitHub OAuth | Social login via Passport.js strategies (already scaffolded in config) | Reduces registration friction; increases signup conversion |
+| Multi-Factor Authentication | TOTP (Google Authenticator) + SMS OTP via Twilio | Meets PSD2 Strong Customer Authentication requirements |
+| Plaid Bank Aggregation | Link external bank accounts via Plaid (API keys configured) | Enables ACH transfers and full financial picture across all institutions |
+| AI Spending Insights | ML-based transaction categorisation and anomaly detection | Proactive fraud alerts and personalised financial coaching |
+| React Native Mobile App | Shared business logic and API client across web and mobile | Captures 70%+ mobile-first banking users |
+| WebSocket Push Notifications | Real-time alerts for transactions, login events, payment confirmations | Eliminates polling; instant customer awareness of account activity |
+| Stripe Payment Integration | Card payments and direct debit (Stripe SDK already installed) | Revenue from payment processing fees |
+| Multi-Currency FX | Live exchange rates with cross-currency transfer support | Serves international and diaspora customer segments |
+| Automated Credit Scoring | Cashflow-based underwriting using 12 months of transaction history | Faster, fairer loan decisions; expanded credit access |
+| Kubernetes Service Mesh (Istio) | mTLS between all pods, traffic management, circuit breakers | Zero-trust internal network with fine-grained observability |
+| Blue/Green Deployments | Two identical production environments; instant traffic switchover | Eliminates rolling update window risk; instant rollback capability |
+| Database Read Replicas | RDS read replica handling all analytics and reporting queries | Offloads heavy aggregations from the transactional primary database |
+| Event Sourcing | Append-only event log as the authoritative system of record | Complete temporal query capability; full regulatory audit trail replay |
+| GDPR Compliance Tooling | One-click data export and right-to-erasure workflow | EU regulatory compliance; customer data rights management |
+| Chaos Engineering | Scheduled fault injection via LitmusChaos on staging | Validates resilience before failures occur in production |
 
 ---
 
-## License
+## 17. License
 
 This project is developed and maintained by **Learnsyte Learning Private Limited (Skillfyme)**.
 
-All rights reserved. Unauthorized copying, distribution, or modification of this project without explicit written permission from Learnsyte Learning Private Limited is prohibited.
+All rights reserved. Unauthorised reproduction, distribution, or modification of this codebase or its documentation is strictly prohibited without prior written consent from Learnsyte Learning Private Limited.
+
+| | |
+|---|---|
+| **Organisation** | Learnsyte Learning Private Limited |
+| **Brand** | Skillfyme |
+| **Website** | [skillfyme.in](https://skillfyme.in) |
+| **Repository** | [github.com/Skillfyme-R/DevOps-Capstone-Projects](https://github.com/Skillfyme-R/DevOps-Capstone-Projects) |
 
 ---
 
-*Built with enterprise DevOps practices — containerization, infrastructure-as-code, CI/CD automation, and production-grade observability.*
+<div align="center">
+  <strong>NexusFinance — Enterprise Digital Banking, built with production-grade engineering by Skillfyme</strong>
+</div>
