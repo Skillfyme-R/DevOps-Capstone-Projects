@@ -1,0 +1,74 @@
+# =============================================================================
+# NexusFinance Backend — Docker Image
+#
+# Multi-stage build:
+#   Stage 1 (builder): Install ALL deps, compile TypeScript → JavaScript
+#   Stage 2 (runtime): Only copy compiled JS + production deps
+#                       This makes the final image ~300MB instead of ~800MB
+#
+# Why smaller image?
+#   - Faster deployments (less to download)
+#   - Less attack surface (no build tools in production)
+#   - Lower container registry storage costs
+# =============================================================================
+
+# ── Stage 1: Builder ──────────────────────────────────────────────────────
+# Use Node 18 LTS Alpine (Alpine = minimal Linux, ~5MB base vs ~900MB full Ubuntu)
+FROM node:18-alpine AS builder
+
+# Install build tools needed for some native npm packages
+RUN apk add --no-cache python3 make g++
+
+WORKDIR /app
+
+# Copy workspace config files first (for Docker layer caching)
+# If only source code changes (not package.json), Docker reuses the
+# node_modules layer from cache → much faster rebuilds
+COPY package.json yarn.lock ./
+COPY packages/backend/package.json ./packages/backend/
+COPY plugins/*/package.json ./plugins/
+
+# Install all dependencies (including devDependencies for TypeScript compiler)
+RUN yarn install --frozen-lockfile
+
+# Copy source code
+COPY packages/backend/ ./packages/backend/
+COPY app-config.yaml ./
+
+# Compile TypeScript to JavaScript
+RUN yarn workspace @nexusfinance/backend build
+
+# Remove devDependencies (not needed at runtime)
+RUN yarn install --frozen-lockfile --production
+
+# ── Stage 2: Runtime ──────────────────────────────────────────────────────
+FROM node:18-alpine AS runtime
+
+# Security: Don't run as root
+# If someone exploits a vulnerability, they get a limited user, not root
+RUN addgroup -g 1001 nexus && adduser -u 1001 -G nexus -s /bin/sh -D nexus
+
+WORKDIR /app
+
+# Copy only what's needed to run the server
+COPY --from=builder --chown=nexus:nexus /app/packages/backend/dist ./dist
+COPY --from=builder --chown=nexus:nexus /app/node_modules ./node_modules
+COPY --from=builder --chown=nexus:nexus /app/app-config.yaml ./app-config.yaml
+COPY --from=builder --chown=nexus:nexus /app/package.json ./
+
+# Create log directory
+RUN mkdir -p logs && chown nexus:nexus logs
+
+USER nexus  # Switch to non-root user
+
+# Environment
+ENV NODE_ENV=production
+ENV PORT=7007
+
+EXPOSE 7007
+
+# Health check: Docker will restart the container if this fails
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD wget -qO- http://localhost:7007/healthz/live || exit 1
+
+CMD ["node", "dist/index.js"]

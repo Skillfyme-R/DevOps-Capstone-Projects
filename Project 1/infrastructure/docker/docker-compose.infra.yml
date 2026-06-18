@@ -1,0 +1,55 @@
+# =============================================================================
+# NexusFinance — Infrastructure Only (Postgres + Redis)
+#
+# Use this for LOCAL DEVELOPMENT so you run the app with:
+#   yarn start:backend   (from VS Code terminal, with hot reload)
+#   yarn start:app       (from VS Code terminal, with hot reload)
+#
+# Start:  docker compose -f infrastructure/docker/docker-compose.infra.yml up -d
+# Stop:   docker compose -f infrastructure/docker/docker-compose.infra.yml down
+# =============================================================================
+
+version: '3.9'
+
+services:
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: nexusfinance-postgres
+    environment:
+      POSTGRES_USER:     nexus_user
+      POSTGRES_PASSWORD: nexus_dev_password
+      POSTGRES_DB:       nexusfinance_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - nexus_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexus_user -d nexusfinance_dev"]
+      interval: 5s
+      timeout:  3s
+      retries:  10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: nexusfinance-redis
+    command: >
+      redis-server
+      --requirepass nexus_redis_dev_password
+      --maxmemory 128mb
+      --maxmemory-policy allkeys-lru
+    ports:
+      - "6380:6379"
+    volumes:
+      - nexus_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "nexus_redis_dev_password", "ping"]
+      interval: 5s
+      timeout:  3s
+      retries:  10
+    restart: unless-stopped
+
+volumes:
+  nexus_postgres_data: { driver: local }
+  nexus_redis_data:    { driver: local }

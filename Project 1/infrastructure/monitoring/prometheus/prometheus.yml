@@ -1,0 +1,101 @@
+# =============================================================================
+# NexusFinance Prometheus Configuration
+#
+# Prometheus "scrapes" (pulls) metrics from targets every 15 seconds.
+# Each target exposes a /metrics endpoint with Prometheus text format.
+#
+# Data it collects:
+#   - HTTP request count and latency per endpoint
+#   - Transaction counts and volumes
+#   - Fraud alert counts
+#   - Node.js memory, CPU, garbage collection
+#   - PostgreSQL query latency (via postgres_exporter)
+#   - Redis memory and hit rate (via redis_exporter)
+#   - Kubernetes pod health (via kube-state-metrics)
+# =============================================================================
+
+global:
+  scrape_interval:     15s   # Collect metrics every 15 seconds
+  evaluation_interval: 15s   # Evaluate alerting rules every 15 seconds
+  scrape_timeout:      10s   # Timeout if target doesn't respond in 10s
+
+  # Labels attached to ALL metrics (useful for multi-cluster setups)
+  external_labels:
+    platform: nexusfinance
+    region:   us-east-1
+
+# ── Alerting Rules ────────────────────────────────────────────────────────
+rule_files:
+  - "alert-rules.yml"
+
+# ── Alertmanager (where to send alerts) ──────────────────────────────────
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+# ── Scrape Jobs ───────────────────────────────────────────────────────────
+scrape_configs:
+
+  # Prometheus scrapes itself (for meta-monitoring)
+  - job_name: prometheus
+    static_configs:
+      - targets: [localhost:9090]
+
+  # NexusFinance Backend
+  - job_name: nexusfinance-backend
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - nexusfinance-backend:7007
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+
+  # In Kubernetes, auto-discover pods that have scrape annotations
+  # (the backend Deployment has prometheus.io/scrape: "true")
+  - job_name: kubernetes-pods
+    kubernetes_sd_configs:
+      - role: pod
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: "true"
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+        action: replace
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: $1:$2
+        target_label: __address__
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        target_label: app
+      - source_labels: [__meta_kubernetes_namespace]
+        target_label: kubernetes_namespace
+
+  # PostgreSQL metrics (via postgres-exporter sidecar)
+  - job_name: nexusfinance-postgres
+    static_configs:
+      - targets: [postgres-exporter:9187]
+    relabel_configs:
+      - target_label: database
+        replacement:  nexusfinance
+
+  # Redis metrics (via redis-exporter sidecar)
+  - job_name: nexusfinance-redis
+    static_configs:
+      - targets: [redis-exporter:9121]
+
+  # Node.js runtime metrics (collected by prom-client in the app)
+  - job_name: nexusfinance-node-runtime
+    metrics_path: /metrics
+    static_configs:
+      - targets: [nexusfinance-backend:7007]
+    metric_relabel_configs:
+      # Only keep Node.js runtime metrics (prefix: nexusfinance_node_)
+      - source_labels: [__name__]
+        regex: nexusfinance_node_.*
+        action: keep

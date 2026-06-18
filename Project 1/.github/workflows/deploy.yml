@@ -1,0 +1,186 @@
+# =============================================================================
+# NexusFinance CD Pipeline — Continuous Deployment
+#
+# Deploys to staging and production after CI passes.
+#
+# Flow:
+#   1. CI passes on main branch
+#   2. Auto-deploy to STAGING
+#   3. Run smoke tests on staging
+#   4. Manual approval required for PRODUCTION
+#   5. Deploy to PRODUCTION with zero downtime
+#   6. Run production smoke tests
+#   7. Notify Slack on success/failure
+# =============================================================================
+
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types:     [completed]
+    branches:  [main]
+
+jobs:
+
+  # ── Deploy to Staging ────────────────────────────────────────────────────
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    environment: staging                             # GitHub Environment (has secrets)
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            us-east-1
+
+      - name: Update kubectl config for EKS
+        run: |
+          aws eks update-kubeconfig \
+            --name nexusfinance-staging \
+            --region us-east-1
+
+      - name: Run database migrations BEFORE deploying new code
+        # This is critical: run migrations first so the NEW code doesn't fail
+        # because it expects columns that don't exist yet.
+        # Migrations must be backward-compatible with the CURRENT running code.
+        run: |
+          kubectl run --rm -i migration-job \
+            --image=ghcr.io/${{ github.repository }}/backend:sha-${{ github.sha }} \
+            --restart=Never \
+            --env-from=secret/nexusfinance-secrets \
+            -- node dist/migrations/run.js
+        timeout-minutes: 5
+
+      - name: Deploy backend to staging
+        run: |
+          kubectl set image deployment/nexusfinance-backend \
+            nexusfinance-backend=ghcr.io/${{ github.repository }}/backend:sha-${{ github.sha }} \
+            --namespace nexusfinance-staging
+
+      - name: Deploy frontend to staging
+        run: |
+          kubectl set image deployment/nexusfinance-frontend \
+            nexusfinance-frontend=ghcr.io/${{ github.repository }}/frontend:sha-${{ github.sha }} \
+            --namespace nexusfinance-staging
+
+      - name: Wait for rollout to complete
+        run: |
+          kubectl rollout status deployment/nexusfinance-backend \
+            --namespace nexusfinance-staging --timeout=300s
+          kubectl rollout status deployment/nexusfinance-frontend \
+            --namespace nexusfinance-staging --timeout=300s
+
+      - name: Run staging smoke tests
+        run: |
+          # Wait for load balancer to be ready
+          sleep 10
+          # Test that the API is responding
+          curl -f https://api-staging.nexusfinance.io/healthz/ready
+          curl -f https://staging.nexusfinance.io/healthz
+
+      - name: Notify Slack — Staging deployed
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text:   |
+            *Staging Deploy* ${{ job.status == 'success' && '✅' || '❌' }}
+            Commit: `${{ github.sha }}`
+            Branch: `${{ github.ref_name }}`
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # ── Deploy to Production (requires manual approval) ──────────────────────
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    environment: production                          # This environment requires manual approval in GitHub
+    # In GitHub → Settings → Environments → production → Protection Rules → Required reviewers
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (production)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.PROD_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}
+          aws-region:            us-east-1
+
+      - name: Update kubectl config for production EKS
+        run: |
+          aws eks update-kubeconfig \
+            --name nexusfinance-production \
+            --region us-east-1
+
+      - name: Run database migrations
+        run: |
+          kubectl run --rm -i migration-job \
+            --image=ghcr.io/${{ github.repository }}/backend:sha-${{ github.sha }} \
+            --restart=Never \
+            --namespace nexusfinance-production \
+            --env-from=secret/nexusfinance-secrets \
+            -- node dist/migrations/run.js
+        timeout-minutes: 10
+
+      - name: Deploy backend to production (rolling update — zero downtime)
+        run: |
+          kubectl set image deployment/nexusfinance-backend \
+            nexusfinance-backend=ghcr.io/${{ github.repository }}/backend:sha-${{ github.sha }} \
+            --namespace nexusfinance-production
+
+      - name: Deploy frontend to production
+        run: |
+          kubectl set image deployment/nexusfinance-frontend \
+            nexusfinance-frontend=ghcr.io/${{ github.repository }}/frontend:sha-${{ github.sha }} \
+            --namespace nexusfinance-production
+
+      - name: Wait for production rollout
+        run: |
+          kubectl rollout status deployment/nexusfinance-backend \
+            --namespace nexusfinance-production --timeout=600s
+
+      - name: Production smoke tests
+        run: |
+          sleep 15
+          curl -f https://api.nexusfinance.io/healthz/ready
+          curl -f https://app.nexusfinance.io/healthz
+
+      # If smoke tests fail, roll back automatically
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "Production smoke tests failed! Rolling back..."
+          kubectl rollout undo deployment/nexusfinance-backend \
+            --namespace nexusfinance-production
+          kubectl rollout undo deployment/nexusfinance-frontend \
+            --namespace nexusfinance-production
+
+      - name: Create GitHub Release
+        if: success()
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ github.run_number }}
+          name:     "Release v${{ github.run_number }}"
+          body:     "Deployed commit ${{ github.sha }} to production."
+          generate_release_notes: true
+
+      - name: Notify Slack — Production deployed
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text:   |
+            *Production Deploy* ${{ job.status == 'success' && '🚀' || '🚨' }}
+            Commit: `${{ github.sha }}`
+            ${{ job.status == 'failure' && 'ROLLBACK INITIATED' || '' }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

@@ -1,0 +1,67 @@
+# =============================================================================
+# NexusFinance HPA (Horizontal Pod Autoscaler)
+#
+# Automatically adds/removes pods based on traffic load.
+#
+# Scenario — Black Friday / salary day (1st of the month):
+#   Normal traffic:      3 pods (minimum)
+#   Payment rush at 9am: CPU spikes → HPA adds pods → 8 pods
+#   Traffic normalizes:  HPA removes pods over 5 minutes → back to 3
+#
+# This is why we pay for the cloud — we only pay for pods we're using.
+# Without HPA, you'd need to provision 8 pods 24/7 "just in case."
+# =============================================================================
+
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: nexusfinance-backend-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: nexusfinance-backend
+
+  minReplicas: 3     # Always run at least 3 for high availability
+  maxReplicas: 20    # Maximum during traffic spikes
+
+  metrics:
+    # Scale up when average CPU across all pods > 70%
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type:               AverageUtilization
+          averageUtilization: 70
+
+    # Scale up when average memory > 80%
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type:               AverageUtilization
+          averageUtilization: 80
+
+    # Custom metric: scale up when > 100 pending requests per pod
+    # (requires Prometheus Adapter + custom metrics API)
+    - type: Pods
+      pods:
+        metric:
+          name: nexusfinance_http_requests_in_flight
+        target:
+          type:         AverageValue
+          averageValue: "100"
+
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60    # Wait 60s before scaling up again
+      policies:
+        - type:          Pods
+          value:         3              # Add at most 3 pods at a time
+          periodSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 300   # Wait 5 minutes before scaling down (avoid flapping)
+      policies:
+        - type:          Pods
+          value:         1              # Remove at most 1 pod at a time
+          periodSeconds: 60

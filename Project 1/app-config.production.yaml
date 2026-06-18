@@ -1,0 +1,30 @@
+# =============================================================================
+# NexusFinance — Production Overrides
+# This file is merged ON TOP of app-config.yaml when NEXUS_ENVIRONMENT=production
+# Only put values here that DIFFER from development defaults.
+# =============================================================================
+
+app:
+  baseUrl: https://app.nexusfinance.io
+
+backend:
+  baseUrl: https://api.nexusfinance.io
+  database:
+    connection:
+      ssl:
+        rejectUnauthorized: true        # Enforce SSL in production
+  cache:
+    connection: ${NEXUS_REDIS_CLUSTER_URL}   # Use Redis Cluster in prod, not single node
+
+auth:
+  environment: production
+
+nexusfinance:
+  platform:
+    environment: production
+  banking:
+    transactionLimits:
+      singleTransfer:  50000
+      dailyTotal:      200000
+      weeklyTotal:     1000000
+      monthlyTotal:    5000000

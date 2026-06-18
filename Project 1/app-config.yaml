@@ -1,0 +1,123 @@
+# =============================================================================
+# NexusFinance Platform — Main Configuration File
+# All ${VAR} placeholders are replaced at runtime from environment variables.
+# Never hardcode secrets here. Use .env file locally, secrets manager in prod.
+# =============================================================================
+
+app:
+  title: NexusFinance Platform
+  baseUrl: http://localhost:3000
+
+organization:
+  name: NexusFinance Corp
+
+backend:
+  baseUrl: http://localhost:7007
+  listen:
+    port: 7007
+    host: 0.0.0.0
+  cors:
+    origin: http://localhost:3000
+    methods: [GET, HEAD, PATCH, POST, PUT, DELETE]
+    credentials: true
+  database:
+    client: pg                            # PostgreSQL driver
+    connection:
+      host:     ${NEXUS_DB_HOST}
+      port:     ${NEXUS_DB_PORT}
+      user:     ${NEXUS_DB_USER}
+      password: ${NEXUS_DB_PASSWORD}
+      database: ${NEXUS_DB_NAME}
+    pool:
+      min: 2
+      max: 20
+  cache:
+    store: redis
+    connection: ${NEXUS_REDIS_URL}
+
+# ---- Authentication Providers -----------------------------------------------
+auth:
+  environment: development
+  session:
+    secret: ${NEXUS_SESSION_SECRET}
+  providers:
+    google:
+      development:
+        clientId:     ${AUTH_GOOGLE_CLIENT_ID}
+        clientSecret: ${AUTH_GOOGLE_CLIENT_SECRET}
+    github:
+      development:
+        clientId:     ${AUTH_GITHUB_CLIENT_ID}
+        clientSecret: ${AUTH_GITHUB_CLIENT_SECRET}
+    microsoft:
+      development:
+        clientId:     ${AUTH_MICROSOFT_CLIENT_ID}
+        clientSecret: ${AUTH_MICROSOFT_CLIENT_SECRET}
+        tenantId:     ${AUTH_MICROSOFT_TENANT_ID}
+
+# ---- Payment Integrations ---------------------------------------------------
+payments:
+  stripe:
+    publicKey:    ${STRIPE_PUBLIC_KEY}
+    secretKey:    ${STRIPE_SECRET_KEY}
+    webhookSecret: ${STRIPE_WEBHOOK_SECRET}
+  plaid:
+    clientId:     ${PLAID_CLIENT_ID}
+    secret:       ${PLAID_SECRET}
+    environment:  ${PLAID_ENV}           # sandbox | development | production
+  wise:
+    apiKey:       ${WISE_API_KEY}
+    environment:  ${WISE_ENV}            # sandbox | live
+
+# ---- Banking Business Rules -------------------------------------------------
+nexusfinance:
+  platform:
+    name:        NexusFinance
+    version:     "1.0.0"
+    environment: ${NEXUS_ENVIRONMENT}   # development | staging | production
+  banking:
+    supportedCurrencies: [USD, EUR, GBP, JPY, CAD, AUD, SGD, INR, AED]
+    defaultCurrency: USD
+    transactionLimits:
+      singleTransfer:   10000           # Max per single transfer (USD)
+      dailyTotal:       50000           # Max total per day (USD)
+      weeklyTotal:      200000
+      monthlyTotal:     500000
+    kycRequired: true
+    amlEnabled:  true
+    fraudScoring: true
+  loans:
+    maxLoanAmount:  500000              # USD
+    minLoanAmount:  1000
+    maxTermMonths:  360                 # 30 years
+    baseInterestRate: 0.065            # 6.5% base APR
+  notifications:
+    emailProvider:  sendgrid
+    smsProvider:    twilio
+    fromEmail:      noreply@nexusfinance.io
+    fromPhone:      ${TWILIO_FROM_NUMBER}
+
+# ---- Third-Party Services ---------------------------------------------------
+integrations:
+  sendgrid:
+    apiKey: ${SENDGRID_API_KEY}
+  twilio:
+    accountSid: ${TWILIO_ACCOUNT_SID}
+    authToken:  ${TWILIO_AUTH_TOKEN}
+  datadog:
+    apiKey: ${DATADOG_API_KEY}
+    appKey: ${DATADOG_APP_KEY}
+  sentry:
+    dsn: ${SENTRY_DSN}
+
+# ---- AWS Cloud Resources ----------------------------------------------------
+aws:
+  region:          ${AWS_REGION}
+  accountId:       ${AWS_ACCOUNT_ID}
+  s3:
+    documentsBucket: nexusfinance-documents-${NEXUS_ENVIRONMENT}
+    backupsBucket:   nexusfinance-backups-${NEXUS_ENVIRONMENT}
+  eks:
+    clusterName: nexusfinance-${NEXUS_ENVIRONMENT}
+  rds:
+    instanceId: nexusfinance-db-${NEXUS_ENVIRONMENT}

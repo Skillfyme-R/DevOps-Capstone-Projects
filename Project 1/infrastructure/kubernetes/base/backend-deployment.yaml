@@ -1,0 +1,160 @@
+# =============================================================================
+# NexusFinance Backend — Kubernetes Deployment
+#
+# A Deployment manages a set of identical pod replicas.
+# Kubernetes keeps the specified number of replicas running at all times.
+# If a pod crashes, K8s automatically creates a replacement.
+#
+# Key concepts:
+#   replicas:          How many pods to run (3 = high availability)
+#   resources:         CPU and memory limits (prevents noisy neighbors)
+#   livenessProbe:     "Is this pod alive?" — K8s restarts if it fails
+#   readinessProbe:    "Can this pod serve traffic?" — removed from LB if it fails
+#   rollingUpdate:     Deploy new version without downtime (one pod at a time)
+# =============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nexusfinance-backend
+  labels:
+    app:       nexusfinance-backend
+    component: backend
+    team:      platform
+    version:   "1.0.0"
+spec:
+  replicas: 3                    # Run 3 pods for high availability
+
+  selector:
+    matchLabels:
+      app: nexusfinance-backend
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge:       1          # Allow 1 extra pod during deployment (4 total temporarily)
+      maxUnavailable: 0          # Never have fewer than 3 healthy pods (zero downtime)
+
+  template:
+    metadata:
+      labels:
+        app:       nexusfinance-backend
+        component: backend
+        version:   "1.0.0"
+      annotations:
+        # Prometheus will scrape metrics from this pod
+        prometheus.io/scrape: "true"
+        prometheus.io/path:   "/metrics"
+        prometheus.io/port:   "7007"
+
+    spec:
+      serviceAccountName: nexusfinance-backend-sa
+
+      # Security context for the entire pod
+      securityContext:
+        runAsNonRoot: true        # Never run as root
+        runAsUser:    1001        # Same user ID as in Dockerfile
+        fsGroup:      1001
+
+      # Spread pods across availability zones (so one AZ failure doesn't take down all 3)
+      topologySpreadConstraints:
+        - maxSkew:           1
+          topologyKey:       topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: nexusfinance-backend
+
+      containers:
+        - name: nexusfinance-backend
+          image: nexusfinance/backend:latest   # Replaced by CI/CD with actual SHA tag
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 7007
+              name: http
+
+          # Resource limits prevent one pod from starving others
+          resources:
+            requests:               # Guaranteed allocation
+              cpu:    "250m"        # 0.25 CPU core
+              memory: "512Mi"       # 512 MB RAM
+            limits:                 # Maximum allowed
+              cpu:    "1000m"       # 1 CPU core
+              memory: "1Gi"         # 1 GB RAM
+
+          # ── Environment variables from Kubernetes Secret ──────────────────
+          # NEVER hardcode secrets in deployment YAML!
+          # Secrets are stored encrypted in etcd and injected at runtime.
+          envFrom:
+            - secretRef:
+                name: nexusfinance-secrets      # kubectl create secret generic nexusfinance-secrets
+            - configMapRef:
+                name: nexusfinance-config       # Non-secret config values
+
+          env:
+            - name: NEXUS_ENVIRONMENT
+              value: "production"
+            - name: PORT
+              value: "7007"
+            # K8s Downward API: pod's own IP and name (useful for distributed tracing)
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+
+          # ── Health Checks ─────────────────────────────────────────────────
+          # Liveness: "Is the process still running and responding?"
+          # If this fails 3 times, K8s kills and restarts the pod
+          livenessProbe:
+            httpGet:
+              path:   /healthz/live
+              port:   7007
+            initialDelaySeconds: 30    # Wait 30s before first check (startup time)
+            periodSeconds:       15    # Check every 15 seconds
+            failureThreshold:    3     # Restart after 3 consecutive failures
+            timeoutSeconds:      5
+
+          # Readiness: "Is this pod ready to receive traffic?"
+          # If this fails, K8s removes the pod from the Service load balancer
+          # but doesn't restart it — useful for warm-up, DB migrations, etc.
+          readinessProbe:
+            httpGet:
+              path:   /healthz/ready
+              port:   7007
+            initialDelaySeconds: 10
+            periodSeconds:       10
+            failureThreshold:    3
+            timeoutSeconds:      5
+
+          # Startup: Allows extra time on first start (for cold DB connections)
+          startupProbe:
+            httpGet:
+              path: /healthz/live
+              port: 7007
+            failureThreshold:    30    # 30 * 10s = 5 minutes to start
+            periodSeconds:       10
+
+          # Graceful shutdown: give the process 30s to finish in-flight requests
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sleep", "5"]   # Let load balancer drain connections
+
+          terminationGracePeriodSeconds: 30
+
+          volumeMounts:
+            - name: logs
+              mountPath: /app/logs
+
+      volumes:
+        - name: logs
+          emptyDir: {}              # Pod-local ephemeral storage for logs
+
+      # Image pull secret for private container registry
+      imagePullSecrets:
+        - name: nexusfinance-registry-secret

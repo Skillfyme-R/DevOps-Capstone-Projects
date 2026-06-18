@@ -1,0 +1,97 @@
+# NexusFinance Service Catalog
+# Describes all services, APIs, and ownership within the platform
+
+apiVersion: nexusfinance.io/v1alpha1
+kind: System
+metadata:
+  name: nexusfinance-platform
+  title: NexusFinance Platform
+  description: Enterprise Digital Banking & Financial Analytics Platform
+  tags: [fintech, banking, payments, core]
+  links:
+    - url: https://app.nexusfinance.io
+      title: Production App
+    - url: https://docs.nexusfinance.io
+      title: Documentation
+    - url: https://status.nexusfinance.io
+      title: Status Page
+spec:
+  owner: platform-team
+  domain: digital-banking
+
+---
+
+apiVersion: nexusfinance.io/v1alpha1
+kind: Component
+metadata:
+  name: nexusfinance-backend
+  title: NexusFinance API Backend
+  description: Core REST API for banking operations, authentication, and business logic
+  tags: [api, node, typescript, express]
+spec:
+  type: service
+  lifecycle: production
+  owner: platform-team
+  system: nexusfinance-platform
+  providesApis:
+    - nexusfinance-rest-api
+  dependsOn:
+    - resource:nexusfinance-postgres
+    - resource:nexusfinance-redis
+
+---
+
+apiVersion: nexusfinance.io/v1alpha1
+kind: Component
+metadata:
+  name: nexusfinance-frontend
+  title: NexusFinance Web App
+  description: React-based financial dashboard for customers and analysts
+  tags: [frontend, react, typescript]
+spec:
+  type: website
+  lifecycle: production
+  owner: platform-team
+  system: nexusfinance-platform
+  consumesApis:
+    - nexusfinance-rest-api
+
+---
+
+apiVersion: nexusfinance.io/v1alpha1
+kind: API
+metadata:
+  name: nexusfinance-rest-api
+  title: NexusFinance REST API v1
+  description: REST API for all NexusFinance banking, payments, and analytics operations
+spec:
+  type: openapi
+  lifecycle: production
+  owner: platform-team
+  definition: docs/api/openapi.yaml
+
+---
+
+apiVersion: nexusfinance.io/v1alpha1
+kind: Resource
+metadata:
+  name: nexusfinance-postgres
+  title: NexusFinance PostgreSQL Database
+  description: Primary relational database (AWS RDS PostgreSQL 15)
+spec:
+  type: database
+  owner: platform-team
+  system: nexusfinance-platform
+
+---
+
+apiVersion: nexusfinance.io/v1alpha1
+kind: Resource
+metadata:
+  name: nexusfinance-redis
+  title: NexusFinance Redis Cache
+  description: Session store, rate limiter, and cache (AWS ElastiCache Redis 7)
+spec:
+  type: cache
+  owner: platform-team
+  system: nexusfinance-platform

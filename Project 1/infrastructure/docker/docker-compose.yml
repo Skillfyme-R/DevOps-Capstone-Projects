@@ -1,0 +1,185 @@
+# =============================================================================
+# NexusFinance Docker Compose
+#
+# Starts the complete NexusFinance stack locally with one command:
+#   yarn docker:up
+#
+# Services:
+#   postgres    — The database (port 5432)
+#   redis       — Cache + rate limiting + sessions (port 6379)
+#   backend     — NexusFinance API (port 7007)
+#   frontend    — React app served by Nginx (port 3000)
+#   adminer     — Database UI (port 8080) — development only
+#   prometheus  — Metrics collector (port 9090)
+#   grafana     — Metrics dashboard (port 3001)
+#
+# Usage:
+#   yarn docker:up      — Start all services in background
+#   yarn docker:down    — Stop all services
+#   yarn docker:logs    — Stream all logs
+#   yarn db:migrate     — Run migrations after postgres is up
+#   yarn db:seed        — Seed demo data
+# =============================================================================
+
+version: '3.9'
+
+services:
+
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: nexusfinance-postgres
+    environment:
+      POSTGRES_USER:     nexus_user
+      POSTGRES_PASSWORD: nexus_dev_password
+      POSTGRES_DB:       nexusfinance_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      # Persist data across container restarts
+      - nexus_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexus_user -d nexusfinance_dev"]
+      interval: 10s
+      timeout:  5s
+      retries:  5
+    networks:
+      - nexus-network
+
+  # ── Redis ───────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: nexusfinance-redis
+    command: >
+      redis-server
+      --requirepass nexus_redis_dev_password
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    ports:
+      - "6380:6379"
+    volumes:
+      - nexus_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "nexus_redis_dev_password", "ping"]
+      interval: 10s
+      timeout:  5s
+      retries:  5
+    networks:
+      - nexus-network
+
+  # ── Backend API ─────────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ../../                         # Build from project root
+      dockerfile: infrastructure/docker/Dockerfile.backend
+    container_name: nexusfinance-backend
+    environment:
+      NEXUS_ENVIRONMENT: development
+      NEXUS_DB_HOST:     postgres
+      NEXUS_DB_PORT:     5432
+      NEXUS_DB_USER:     nexus_user
+      NEXUS_DB_PASSWORD: nexus_dev_password
+      NEXUS_DB_NAME:     nexusfinance_dev
+      NEXUS_REDIS_URL:   redis://:nexus_redis_dev_password@redis:6379
+      # Note: inside Docker network, Redis is always on port 6379 (host port 6380 is for your Mac)
+      NEXUS_BACKEND_SECRET: dev-secret-change-in-prod-64chars-minimum-length-required
+      NEXUS_SESSION_SECRET: dev-session-change-in-prod-64chars-minimum-length-required
+    ports:
+      - "7007:7007"
+    depends_on:
+      postgres:
+        condition: service_healthy    # Wait until postgres is ready
+      redis:
+        condition: service_healthy
+    volumes:
+      - nexus_logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - nexus-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:7007/healthz/ready || exit 1"]
+      interval: 30s
+      timeout:  10s
+      retries:  3
+      start_period: 30s
+
+  # ── Frontend ────────────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ../../
+      dockerfile: infrastructure/docker/Dockerfile.app
+      args:
+        REACT_APP_API_URL: http://localhost:7007
+        REACT_APP_ENVIRONMENT: development
+    container_name: nexusfinance-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - nexus-network
+
+  # ── Database Admin UI (development only) ────────────────────────────────────
+  adminer:
+    image: adminer:4
+    container_name: nexusfinance-adminer
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    networks:
+      - nexus-network
+    profiles: [dev]  # Only started with: docker-compose --profile dev up
+
+  # ── Prometheus (metrics collection) ─────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.46.0
+    container_name: nexusfinance-prometheus
+    volumes:
+      - ../monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - nexus_prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'     # Keep 30 days of metrics
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    networks:
+      - nexus-network
+
+  # ── Grafana (metrics visualization) ─────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:10.1.0
+    container_name: nexusfinance-grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: nexus_grafana_admin
+      GF_USERS_ALLOW_SIGN_UP:     "false"
+      GF_SERVER_ROOT_URL:          http://localhost:3001
+    volumes:
+      - nexus_grafana_data:/var/lib/grafana
+      - ../monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+      - ../monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+    ports:
+      - "4000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - nexus-network
+
+# ── Volumes (persistent storage) ─────────────────────────────────────────────
+volumes:
+  nexus_postgres_data:   { driver: local }
+  nexus_redis_data:      { driver: local }
+  nexus_logs:            { driver: local }
+  nexus_prometheus_data: { driver: local }
+  nexus_grafana_data:    { driver: local }
+
+# ── Network ───────────────────────────────────────────────────────────────────
+networks:
+  nexus-network:
+    driver: bridge
+    name: nexusfinance-dev-network
