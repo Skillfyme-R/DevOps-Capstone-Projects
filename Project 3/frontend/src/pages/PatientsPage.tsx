@@ -143,7 +143,7 @@ export default function PatientsPage() {
                           </TableCell>
                           <TableCell>{p.blood_group ? <Chip label={p.blood_group} size="small" color="error" variant="outlined" /> : '—'}</TableCell>
                           <TableCell><Typography variant="body2">{p.phone || '—'}</Typography></TableCell>
-                          <TableCell><Typography variant="body2" color="text.secondary">{p.created_at ? format(new Date(p.created_at), 'MMM d, yyyy') : '—'}</Typography></TableCell>
+                          <TableCell><Typography variant="body2" color="text.secondary">{p.created_at ? new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(p.created_at)) : '—'}</Typography></TableCell>
                           <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                             <Tooltip title="View Patient"><IconButton size="small" onClick={() => navigate(`/patients/${p.id}`)} sx={{ color: 'primary.main' }}><VisibilityIcon fontSize="small" /></IconButton></Tooltip>
                           </TableCell>

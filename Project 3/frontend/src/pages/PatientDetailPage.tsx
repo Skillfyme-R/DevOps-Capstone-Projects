@@ -61,7 +61,7 @@ export default function PatientDetailPage() {
               <Stack spacing={0.5} alignItems="flex-end">
                 {patient?.phone && <Typography variant="body2" color="text.secondary">{patient.phone}</Typography>}
                 {patient?.email && <Typography variant="body2" color="text.secondary">{patient.email}</Typography>}
-                {patient?.date_of_birth && <Typography variant="body2" color="text.secondary">DOB: {format(parseISO(patient.date_of_birth), 'MMM d, yyyy')}</Typography>}
+                {patient?.date_of_birth && <Typography variant="body2" color="text.secondary">DOB: {new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(patient.date_of_birth))}</Typography>}
               </Stack>
             </Grid>
           </Grid>

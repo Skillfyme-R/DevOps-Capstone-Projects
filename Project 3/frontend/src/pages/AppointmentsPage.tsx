@@ -5,7 +5,18 @@ import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
 import VideoCallIcon from '@mui/icons-material/VideoCall';
 import { useQuery, useQueryClient } from 'react-query';
-import { format, parseISO } from 'date-fns';
+import { parseISO } from 'date-fns';
+
+const TZ = 'Asia/Kolkata';
+function fmtDate(iso: string) {
+  return new Intl.DateTimeFormat('en-IN', { timeZone: TZ, day: 'numeric', month: 'short', year: 'numeric' }).format(parseISO(iso));
+}
+function fmtTime(iso: string) {
+  return new Intl.DateTimeFormat('en-IN', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hour12: true }).format(parseISO(iso));
+}
+function fmtDateTime(iso: string) {
+  return `${fmtDate(iso)}, ${fmtTime(iso)}`;
+}
 import { patientsClient, appointmentsClient } from '../utils/apiClient';
 import { MC_COLORS } from '../styles/theme';
 
@@ -160,8 +171,8 @@ export default function AppointmentsPage() {
                   : appointments.map((a: Record<string, any>) => (
                     <TableRow key={a.id} hover>
                       <TableCell>
-                        <Typography variant="body2" fontWeight={600}>{a.scheduled_at ? format(parseISO(a.scheduled_at), 'MMM d, yyyy') : '—'}</Typography>
-                        <Typography variant="caption" color="text.secondary">{a.scheduled_at ? format(parseISO(a.scheduled_at), 'h:mm a') : ''}</Typography>
+                        <Typography variant="body2" fontWeight={600}>{a.scheduled_at ? fmtDate(a.scheduled_at) : '—'}</Typography>
+                        <Typography variant="caption" color="text.secondary">{a.scheduled_at ? fmtTime(a.scheduled_at) : ''} IST</Typography>
                       </TableCell>
                       <TableCell><Chip label={a.type?.replace(/_/g, ' ')} size="small" /></TableCell>
                       <TableCell><Typography variant="body2" noWrap sx={{ maxWidth: 180 }}>{a.chief_complaint || '—'}</Typography></TableCell>
@@ -204,7 +215,7 @@ export default function AppointmentsPage() {
             {statusError && <Alert severity="error" sx={{ mb: 2 }}>{statusError}</Alert>}
             <Typography variant="body2" color="text.secondary" mb={2}>
               {statusDialogAppt?.chief_complaint || statusDialogAppt?.type?.replace(/_/g, ' ')} —{' '}
-              {statusDialogAppt?.scheduled_at ? format(parseISO(statusDialogAppt.scheduled_at), 'MMM d, yyyy h:mm a') : ''}
+              {statusDialogAppt?.scheduled_at ? fmtDateTime(statusDialogAppt.scheduled_at) + ' IST' : ''}
             </Typography>
             <Stack direction="row" spacing={1} mb={2} alignItems="center">
               <Typography variant="body2" color="text.secondary">Current:</Typography>
