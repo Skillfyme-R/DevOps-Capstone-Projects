@@ -5,7 +5,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import VideoCallIcon from '@mui/icons-material/VideoCall';
 import { useQuery, useQueryClient } from 'react-query';
 import { format, parseISO } from 'date-fns';
-import { apiClient } from '../utils/apiClient';
+import { patientsClient, appointmentsClient } from '../utils/apiClient';
 import { MC_COLORS } from '../styles/theme';
 
 const STATUS_COLOR: Record<string, 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'> = {
@@ -28,13 +28,13 @@ export default function AppointmentsPage() {
 
   const { data, isLoading } = useQuery(
     ['appointments', status, from],
-    () => apiClient.get('/appointments', { params: { status: status || undefined, from: from || undefined, limit: 30 } }).then((r: { data: any }) => r.data),
+    () => appointmentsClient.get('/appointments', { params: { status: status || undefined, from: from || undefined, limit: 30 } }).then((r: { data: any }) => r.data),
     { retry: false }
   );
 
   const { data: patientsData } = useQuery(
     'patients-list',
-    () => apiClient.get('/patients', { params: { limit: 100 } }).then((r: { data: any }) => r.data),
+    () => patientsClient.get('/patients', { params: { limit: 100 } }).then((r: { data: any }) => r.data),
     { retry: false }
   );
 
@@ -52,7 +52,7 @@ export default function AppointmentsPage() {
     setSaving(true);
     setFormError('');
     try {
-      await apiClient.post('/appointments', {
+      await appointmentsClient.post('/appointments', {
         patientId: form.patientId,
         type: form.type,
         scheduledAt: new Date(form.scheduledAt).toISOString(),

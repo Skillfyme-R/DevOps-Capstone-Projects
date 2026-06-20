@@ -9,7 +9,7 @@ import MedicationIcon from '@mui/icons-material/Medication';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import { useQuery } from 'react-query';
 import { format, differenceInYears, parseISO } from 'date-fns';
-import { apiClient } from '../utils/apiClient';
+import { patientsClient } from '../utils/apiClient';
 import { MC_COLORS } from '../styles/theme';
 
 const SEVERITY_COLOR: Record<string, string> = { mild: MC_COLORS.status.stable, moderate: MC_COLORS.status.warning, severe: MC_COLORS.status.critical, life_threatening: MC_COLORS.status.critical };
@@ -21,7 +21,7 @@ export default function PatientDetailPage() {
 
   const { data, isLoading, error } = useQuery(
     ['patient', id],
-    () => apiClient.get(`/patients/${id}`).then((r: { data: any }) => r.data),
+    () => patientsClient.get(`/patients/${id}`).then((r: { data: any }) => r.data),
     { retry: false }
   );
 

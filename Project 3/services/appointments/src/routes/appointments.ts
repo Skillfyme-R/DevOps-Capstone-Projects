@@ -9,9 +9,9 @@ const router = Router();
 
 const appointmentSchema = Joi.object({
   patientId: Joi.string().uuid().required(),
-  physicianId: Joi.string().uuid().required(),
-  facilityId: Joi.string().uuid().required(),
-  type: Joi.string().valid('consultation', 'follow_up', 'procedure', 'lab', 'imaging', 'telemedicine', 'emergency').required(),
+  physicianId: Joi.string().uuid().optional(),
+  facilityId: Joi.string().uuid().optional(),
+  type: Joi.string().valid('consultation', 'follow_up', 'procedure', 'lab', 'imaging', 'telemedicine', 'emergency', 'routine_checkup', 'specialist').required(),
   scheduledAt: Joi.string().isoDate().required(),
   durationMinutes: Joi.number().integer().min(15).max(240).default(30),
   chiefComplaint: Joi.string().max(500).optional(),
@@ -66,20 +66,24 @@ router.post('/', authenticate, requireRole('clinician', 'nurse', 'admin', 'super
   if (error) throw new ValidationError(error.details[0].message);
 
   const db = getDb();
-  const conflict = await db('mc_appointments')
-    .where({ physician_id: value.physicianId, is_cancelled: false })
-    .whereBetween('scheduled_at', [
-      new Date(new Date(value.scheduledAt).getTime() - value.durationMinutes * 60000),
-      new Date(new Date(value.scheduledAt).getTime() + value.durationMinutes * 60000),
-    ]).first();
+  const physicianId = value.physicianId || req.user?.sub;
+  const facilityId = value.facilityId || req.user?.facilityId || null;
 
-  if (conflict) throw new ValidationError('Physician already has an appointment in this time slot');
+  if (physicianId) {
+    const conflict = await db('mc_appointments')
+      .where({ physician_id: physicianId, is_cancelled: false })
+      .whereBetween('scheduled_at', [
+        new Date(new Date(value.scheduledAt).getTime() - value.durationMinutes * 60000),
+        new Date(new Date(value.scheduledAt).getTime() + value.durationMinutes * 60000),
+      ]).first();
+    if (conflict) throw new ValidationError('Physician already has an appointment in this time slot');
+  }
 
   const [appointment] = await db('mc_appointments').insert({
     id: uuidv4(),
     patient_id: value.patientId,
-    physician_id: value.physicianId,
-    facility_id: value.facilityId,
+    physician_id: physicianId || null,
+    facility_id: facilityId,
     type: value.type,
     scheduled_at: value.scheduledAt,
     duration_minutes: value.durationMinutes,

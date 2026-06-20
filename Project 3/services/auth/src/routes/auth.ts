@@ -223,4 +223,120 @@ router.get('/users', authenticate, requireRole('admin', 'superadmin'), async (_r
   res.json({ users, total: users.length });
 });
 
+router.patch('/profile', authenticate, async (req: Request, res: Response) => {
+  const schema = Joi.object({
+    firstName: Joi.string().min(1).max(100).optional(),
+    lastName: Joi.string().min(1).max(100).optional(),
+    phone: Joi.string().pattern(/^\+?[1-9]\d{7,14}$/).optional().allow('', null),
+  });
+  const { error, value } = schema.validate(req.body);
+  if (error) throw new ValidationError(error.details[0].message);
+
+  const db = getDb();
+  const updates: Record<string, unknown> = { updated_at: new Date() };
+  if (value.firstName !== undefined) updates.first_name = value.firstName;
+  if (value.lastName !== undefined) updates.last_name = value.lastName;
+  if (value.phone !== undefined) updates.phone = value.phone || null;
+
+  await db('mc_users').where({ id: req.user!.sub }).update(updates);
+  const row = await db('mc_users').where({ id: req.user!.sub }).select('id', 'email', 'first_name', 'last_name', 'role', 'facility_id', 'phone', 'mfa_enabled').first();
+
+  res.json({
+    message: 'Profile updated successfully',
+    user: {
+      id: row.id, email: row.email, firstName: row.first_name, lastName: row.last_name,
+      role: row.role, facilityId: row.facility_id, phone: row.phone, mfaEnabled: row.mfa_enabled,
+    },
+  });
+});
+
+router.post('/change-password', authenticate, async (req: Request, res: Response) => {
+  const schema = Joi.object({
+    currentPassword: Joi.string().required(),
+    newPassword: Joi.string().min(12).pattern(/^(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9])/).required()
+      .messages({ 'string.pattern.base': 'Password must contain uppercase, number, and special character' }),
+  });
+  const { error, value } = schema.validate(req.body);
+  if (error) throw new ValidationError(error.details[0].message);
+
+  const db = getDb();
+  const user = await db('mc_users').where({ id: req.user!.sub }).first();
+  if (!user) throw new NotFoundError('User');
+
+  const valid = await bcrypt.compare(value.currentPassword, user.password_hash);
+  if (!valid) throw new UnauthorizedError('Current password is incorrect');
+
+  const newHash = await bcrypt.hash(value.newPassword, Number(process.env.MEDICORE_BCRYPT_ROUNDS) || 12);
+  await db('mc_users').where({ id: req.user!.sub }).update({ password_hash: newHash, updated_at: new Date() });
+
+  try {
+    await db('mc_audit_logs').insert({
+      id: uuidv4(),
+      actor_id: req.user!.sub,
+      action: 'PASSWORD_CHANGED',
+      entity_type: 'user',
+      entity_id: req.user!.sub,
+      ip_address: req.ip,
+      user_agent: req.headers['user-agent'] || '',
+      created_at: new Date(),
+    });
+  } catch { /* non-fatal */ }
+
+  res.json({ message: 'Password changed successfully' });
+});
+
+router.post('/mfa/enable', authenticate, async (req: Request, res: Response) => {
+  const db = getDb();
+  await db('mc_users').where({ id: req.user!.sub }).update({ mfa_enabled: true, updated_at: new Date() });
+  res.json({ message: 'MFA enabled successfully', mfaEnabled: true });
+});
+
+router.post('/mfa/disable', authenticate, async (req: Request, res: Response) => {
+  const db = getDb();
+  await db('mc_users').where({ id: req.user!.sub }).update({ mfa_enabled: false, updated_at: new Date() });
+  res.json({ message: 'MFA disabled successfully', mfaEnabled: false });
+});
+
+router.post('/invite', authenticate, requireRole('admin', 'superadmin'), async (req: Request, res: Response) => {
+  const schema = Joi.object({
+    email: Joi.string().email().required(),
+    firstName: Joi.string().min(1).max(100).required(),
+    lastName: Joi.string().min(1).max(100).required(),
+    role: Joi.string().valid('patient', 'clinician', 'nurse', 'admin').required(),
+  });
+  const { error, value } = schema.validate(req.body);
+  if (error) throw new ValidationError(error.details[0].message);
+
+  const db = getDb();
+  const existing = await db('mc_users').where({ email: value.email }).first();
+  if (existing) throw new ConflictError('An account with this email already exists');
+
+  const tempPassword = `Temp@${Math.random().toString(36).slice(2, 10)}!`;
+  const passwordHash = await bcrypt.hash(tempPassword, Number(process.env.MEDICORE_BCRYPT_ROUNDS) || 12);
+  const userId = uuidv4();
+
+  await db('mc_users').insert({
+    id: userId,
+    email: value.email,
+    password_hash: passwordHash,
+    first_name: value.firstName,
+    last_name: value.lastName,
+    role: value.role,
+    status: 'active',
+    email_verified: false,
+    mfa_enabled: false,
+    created_at: new Date(),
+    updated_at: new Date(),
+  });
+
+  logger.info('User invited', { invitedBy: req.user!.sub, userId, email: value.email, role: value.role });
+
+  res.status(201).json({
+    message: `User invited successfully. Temporary password: ${tempPassword}`,
+    userId,
+    email: value.email,
+    temporaryPassword: tempPassword,
+  });
+});
+
 export default router;

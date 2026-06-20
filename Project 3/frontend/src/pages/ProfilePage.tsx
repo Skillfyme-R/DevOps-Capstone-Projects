@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Card, CardContent, Typography, Stack, Avatar, Chip, Button, TextField, Grid, Divider, Alert, LinearProgress, Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress, IconButton } from '@mui/material';
+import { Box, Card, CardContent, Typography, Stack, Avatar, Chip, Button, TextField, Grid, Divider, Alert, LinearProgress, Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress, IconButton, Switch } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
 import SecurityIcon from '@mui/icons-material/Security';
@@ -26,6 +26,26 @@ export default function ProfilePage() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
+
+  // MFA toggle
+  const [mfaEnabled, setMfaEnabled] = useState(user?.mfaEnabled ?? false);
+  const [mfaLoading, setMfaLoading] = useState(false);
+  const [mfaMsg, setMfaMsg] = useState('');
+
+  async function handleMfaToggle() {
+    setMfaLoading(true);
+    setMfaMsg('');
+    try {
+      const endpoint = mfaEnabled ? '/auth/mfa/disable' : '/auth/mfa/enable';
+      await apiClient.post(endpoint);
+      setMfaEnabled((v) => !v);
+      setMfaMsg(mfaEnabled ? 'MFA disabled' : 'MFA enabled successfully');
+    } catch {
+      setMfaMsg('Failed to update MFA setting');
+    } finally {
+      setMfaLoading(false);
+    }
+  }
 
   // Password change dialog
   const [pwdOpen, setPwdOpen] = useState(false);
@@ -178,13 +198,17 @@ export default function ProfilePage() {
                   <SecurityIcon sx={{ color: 'primary.main' }} />
                   <Typography variant="h6" fontWeight={700}>Security Settings</Typography>
                 </Stack>
+                {mfaMsg && <Alert severity={mfaMsg.includes('Failed') ? 'error' : 'success'} onClose={() => setMfaMsg('')} sx={{ mb: 2 }}>{mfaMsg}</Alert>}
                 <Stack spacing={2}>
                   <Stack direction="row" justifyContent="space-between" alignItems="center">
                     <Box>
                       <Typography variant="body2" fontWeight={600}>Multi-Factor Authentication</Typography>
                       <Typography variant="caption" color="text.secondary">Add an extra layer of security to your account</Typography>
                     </Box>
-                    <Chip label={user.mfaEnabled ? 'Enabled' : 'Disabled'} color={user.mfaEnabled ? 'success' : 'default'} size="small" />
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <Chip label={mfaEnabled ? 'Enabled' : 'Disabled'} color={mfaEnabled ? 'success' : 'default'} size="small" />
+                      <Switch checked={mfaEnabled} onChange={handleMfaToggle} disabled={mfaLoading} size="small" color="success" />
+                    </Stack>
                   </Stack>
                   <Divider />
                   <Stack direction="row" justifyContent="space-between" alignItems="center">

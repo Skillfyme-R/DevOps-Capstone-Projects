@@ -8,7 +8,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { useNavigate } from 'react-router-dom';
-import { apiClient } from '../utils/apiClient';
+import { analyticsClient } from '../utils/apiClient';
 import { useAuthContext } from '../App';
 import { MC_COLORS } from '../styles/theme';
 
@@ -61,7 +61,7 @@ export default function DashboardPage() {
 
   const { data: summary, isLoading } = useQuery(
     'analytics-summary',
-    () => apiClient.get('/analytics/summary').then((r: { data: any }) => r.data),
+    () => analyticsClient.get('/analytics/summary').then((r: { data: any }) => r.data),
     { enabled: isAdmin, retry: false }
   );
 

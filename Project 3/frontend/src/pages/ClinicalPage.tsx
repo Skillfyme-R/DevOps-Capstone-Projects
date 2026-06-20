@@ -110,7 +110,7 @@ export default function ClinicalPage() {
                 ))}
               </Stack>
               <Divider sx={{ my: 2 }} />
-              <Button variant="outlined" size="small" fullWidth onClick={() => window.open('/fhir/r4/metadata', '_blank')}>
+              <Button variant="outlined" size="small" fullWidth onClick={() => window.open('http://localhost:9002/fhir/r4/metadata', '_blank')}>
                 View FHIR Capability Statement
               </Button>
             </CardContent>

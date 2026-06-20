@@ -8,7 +8,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import CloseIcon from '@mui/icons-material/Close';
 import { useQuery, useQueryClient } from 'react-query';
 import { format, differenceInYears, parseISO } from 'date-fns';
-import { apiClient } from '../utils/apiClient';
+import { patientsClient } from '../utils/apiClient';
 import { MC_COLORS } from '../styles/theme';
 
 const GENDER_COLOR: Record<string, string> = { male: MC_COLORS.teal[500], female: MC_COLORS.emerald[500], other: MC_COLORS.status.info };
@@ -29,7 +29,7 @@ export default function PatientsPage() {
 
   const { data, isLoading } = useQuery(
     ['patients', search, page],
-    () => apiClient.get('/patients', { params: { search, page, limit: LIMIT } }).then((r: { data: any }) => r.data),
+    () => patientsClient.get('/patients', { params: { search, page, limit: LIMIT } }).then((r: { data: any }) => r.data),
     { keepPreviousData: true, retry: false }
   );
 
@@ -46,7 +46,7 @@ export default function PatientsPage() {
     setSaving(true);
     setFormError('');
     try {
-      await apiClient.post('/patients', {
+      await patientsClient.post('/patients', {
         firstName: form.firstName,
         lastName: form.lastName,
         email: form.email || undefined,

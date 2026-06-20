@@ -1,10 +1,11 @@
-import React from 'react';
-import { Box, Grid, Card, CardContent, Typography, Stack, Avatar, Chip, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, Alert } from '@mui/material';
+import React, { useState } from 'react';
+import { Box, Grid, Card, CardContent, Typography, Stack, Avatar, Chip, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, Alert, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem, IconButton, CircularProgress } from '@mui/material';
 import PeopleIcon from '@mui/icons-material/People';
 import StorageIcon from '@mui/icons-material/Storage';
 import SecurityIcon from '@mui/icons-material/Security';
 import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
-import { useQuery } from 'react-query';
+import CloseIcon from '@mui/icons-material/Close';
+import { useQuery, useQueryClient } from 'react-query';
 import { apiClient } from '../utils/apiClient';
 import { MC_COLORS } from '../styles/theme';
 
@@ -26,12 +27,49 @@ const SYSTEM_STATUS = [
   { name: 'Redis Cache', status: 'Connected', port: 6382, color: 'success' },
 ];
 
+const EMPTY_INVITE = { email: '', firstName: '', lastName: '', role: 'clinician' };
+
 export default function AdminPage() {
+  const queryClient = useQueryClient();
   const { data: users, isLoading, isError } = useQuery(
     'admin-users',
     () => apiClient.get('/auth/users').then((r: { data: any }) => r.data),
     { retry: false }
   );
+
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteForm, setInviteForm] = useState(EMPTY_INVITE);
+  const [inviteSaving, setInviteSaving] = useState(false);
+  const [inviteError, setInviteError] = useState('');
+  const [inviteResult, setInviteResult] = useState<{ email: string; temporaryPassword: string } | null>(null);
+
+  function updateInvite(key: string) {
+    return (e: React.ChangeEvent<HTMLInputElement>) =>
+      setInviteForm((f) => ({ ...f, [key]: e.target.value }));
+  }
+
+  async function handleInvite(e: React.FormEvent) {
+    e.preventDefault();
+    setInviteSaving(true);
+    setInviteError('');
+    try {
+      const res = await apiClient.post('/auth/invite', inviteForm).then((r: { data: any }) => r.data);
+      setInviteResult({ email: res.email, temporaryPassword: res.temporaryPassword });
+      queryClient.invalidateQueries('admin-users');
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message || 'Failed to invite user';
+      setInviteError(msg);
+    } finally {
+      setInviteSaving(false);
+    }
+  }
+
+  function handleInviteClose() {
+    setInviteOpen(false);
+    setInviteForm(EMPTY_INVITE);
+    setInviteError('');
+    setInviteResult(null);
+  }
 
   return (
     <Box>
@@ -71,7 +109,7 @@ export default function AdminPage() {
             <CardContent sx={{ p: 3 }}>
               <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
                 <Typography variant="h6" fontWeight={700}>User Management</Typography>
-                <Button size="small" variant="contained">+ Invite User</Button>
+                <Button size="small" variant="contained" onClick={() => setInviteOpen(true)}>+ Invite User</Button>
               </Stack>
               {isError && <Alert severity="error">Could not load users — check admin permissions.</Alert>}
               {!isError && (
@@ -133,6 +171,61 @@ export default function AdminPage() {
           </Card>
         </Grid>
       </Grid>
+
+      {/* Invite User Dialog */}
+      <Dialog open={inviteOpen} onClose={handleInviteClose} maxWidth="xs" fullWidth>
+        <DialogTitle>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Typography variant="h6" fontWeight={700}>Invite User</Typography>
+            <IconButton size="small" onClick={handleInviteClose}><CloseIcon fontSize="small" /></IconButton>
+          </Stack>
+        </DialogTitle>
+        {inviteResult ? (
+          <>
+            <DialogContent dividers>
+              <Alert severity="success" sx={{ mb: 2 }}>User invited successfully!</Alert>
+              <Typography variant="body2" gutterBottom>
+                <strong>Email:</strong> {inviteResult.email}
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                <strong>Temporary Password:</strong>
+              </Typography>
+              <Box sx={{ p: 1.5, bgcolor: 'grey.100', borderRadius: 1, fontFamily: 'monospace', fontSize: '0.9rem', wordBreak: 'break-all' }}>
+                {inviteResult.temporaryPassword}
+              </Box>
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                Share this password securely. The user should change it on first login.
+              </Typography>
+            </DialogContent>
+            <DialogActions sx={{ p: 2 }}>
+              <Button variant="contained" onClick={handleInviteClose}>Done</Button>
+            </DialogActions>
+          </>
+        ) : (
+          <form onSubmit={handleInvite}>
+            <DialogContent dividers>
+              {inviteError && <Alert severity="error" sx={{ mb: 2 }}>{inviteError}</Alert>}
+              <Stack spacing={2}>
+                <TextField label="First Name" value={inviteForm.firstName} onChange={updateInvite('firstName')} fullWidth required autoFocus />
+                <TextField label="Last Name" value={inviteForm.lastName} onChange={updateInvite('lastName')} fullWidth required />
+                <TextField label="Email" type="email" value={inviteForm.email} onChange={updateInvite('email')} fullWidth required />
+                <TextField select label="Role" value={inviteForm.role} onChange={updateInvite('role')} fullWidth required>
+                  <MenuItem value="clinician">Clinician</MenuItem>
+                  <MenuItem value="nurse">Nurse</MenuItem>
+                  <MenuItem value="admin">Admin</MenuItem>
+                  <MenuItem value="patient">Patient</MenuItem>
+                </TextField>
+              </Stack>
+            </DialogContent>
+            <DialogActions sx={{ p: 2 }}>
+              <Button onClick={handleInviteClose} disabled={inviteSaving}>Cancel</Button>
+              <Button type="submit" variant="contained" disabled={inviteSaving} startIcon={inviteSaving ? <CircularProgress size={16} /> : null}>
+                {inviteSaving ? 'Inviting...' : 'Send Invite'}
+              </Button>
+            </DialogActions>
+          </form>
+        )}
+      </Dialog>
     </Box>
   );
 }
