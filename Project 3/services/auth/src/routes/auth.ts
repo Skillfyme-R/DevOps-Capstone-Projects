@@ -199,9 +199,22 @@ router.post('/refresh', async (req: Request, res: Response) => {
 
 router.get('/me', authenticate, async (req: Request, res: Response) => {
   const db = getDb();
-  const user = await db('mc_users').where({ id: req.user!.sub }).select('id', 'email', 'first_name', 'last_name', 'role', 'facility_id', 'phone', 'mfa_enabled', 'last_login_at', 'created_at').first();
-  if (!user) throw new NotFoundError('User');
-  res.json({ user });
+  const row = await db('mc_users').where({ id: req.user!.sub }).select('id', 'email', 'first_name', 'last_name', 'role', 'facility_id', 'phone', 'mfa_enabled', 'last_login_at', 'created_at').first();
+  if (!row) throw new NotFoundError('User');
+  res.json({
+    user: {
+      id: row.id,
+      email: row.email,
+      firstName: row.first_name,
+      lastName: row.last_name,
+      role: row.role,
+      facilityId: row.facility_id,
+      phone: row.phone,
+      mfaEnabled: row.mfa_enabled,
+      lastLoginAt: row.last_login_at,
+      createdAt: row.created_at,
+    },
+  });
 });
 
 router.get('/users', authenticate, requireRole('admin', 'superadmin'), async (_req: Request, res: Response) => {

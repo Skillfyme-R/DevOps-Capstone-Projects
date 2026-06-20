@@ -100,7 +100,7 @@ function SidebarContent({ collapsed, onCollapse }: { collapsed: boolean; onColla
       {user && (
         <Box sx={{ p: collapsed ? 1 : 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
           <Avatar sx={{ width: 36, height: 36, bgcolor: MC_COLORS.teal[500], fontSize: '0.875rem', flexShrink: 0 }}>
-            {user.firstName[0]}{user.lastName[0]}
+            {user.firstName?.[0]}{user.lastName?.[0]}
           </Avatar>
           {!collapsed && (
             <Box overflow="hidden">

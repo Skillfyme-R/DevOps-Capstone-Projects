@@ -50,7 +50,7 @@ export default function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
               <Tooltip title={`${user.firstName} ${user.lastName}`}>
                 <IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => setAnchor(e.currentTarget)} sx={{ p: 0.5 }}>
                   <Avatar sx={{ width: 34, height: 34, bgcolor: MC_COLORS.teal[500], fontSize: '0.8rem' }}>
-                    {user.firstName[0]}{user.lastName[0]}
+                    {user.firstName?.[0]}{user.lastName?.[0]}
                   </Avatar>
                 </IconButton>
               </Tooltip>
