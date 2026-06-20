@@ -36,7 +36,7 @@ export default function PatientDetailPage() {
       <Stack direction="row" spacing={2} mb={4} alignItems="center">
         <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/patients')} variant="outlined" size="small">Back</Button>
         <Box flex={1} />
-        <Button startIcon={<EditIcon />} variant="outlined" size="small">Edit</Button>
+        <Button startIcon={<EditIcon />} variant="outlined" size="small" onClick={() => navigate(`/patients/${id}/edit`)}>Edit</Button>
         <Button startIcon={<CalendarMonthIcon />} variant="contained" size="small" onClick={() => navigate('/appointments')}>Book Appointment</Button>
       </Stack>
 

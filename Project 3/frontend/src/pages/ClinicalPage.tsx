@@ -59,7 +59,7 @@ export default function ClinicalPage() {
             <CardContent sx={{ p: 3 }}>
               <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
                 <Typography variant="h6" fontWeight={700}>Recent Clinical Notes</Typography>
-                <Button size="small" variant="contained">+ New Note</Button>
+                <Button size="small" variant="contained" onClick={() => window.location.href = '/patients'}>+ New Note</Button>
               </Stack>
               <Stack spacing={0}>
                 {RECENT_NOTES.map((n, i) => (

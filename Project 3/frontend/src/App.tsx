@@ -54,6 +54,8 @@ export default function App() {
             <Route element={<AppLayout />}>
               <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
               <Route path="/patients" element={<ProtectedRoute roles={['clinician', 'nurse', 'admin', 'superadmin']}><PatientsPage /></ProtectedRoute>} />
+              <Route path="/patients/new" element={<Navigate to="/patients" replace />} />
+              <Route path="/patients/:id/edit" element={<Navigate to="/patients" replace />} />
               <Route path="/patients/:id" element={<ProtectedRoute roles={['clinician', 'nurse', 'admin', 'superadmin']}><PatientDetailPage /></ProtectedRoute>} />
               <Route path="/appointments" element={<ProtectedRoute><AppointmentsPage /></ProtectedRoute>} />
               <Route path="/clinical" element={<ProtectedRoute roles={['clinician', 'nurse', 'admin', 'superadmin']}><ClinicalPage /></ProtectedRoute>} />

@@ -1,21 +1,30 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Card, CardContent, Typography, Button, TextField, InputAdornment, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Avatar, IconButton, Stack, Skeleton, Pagination, Tooltip } from '@mui/material';
+import { Box, Card, CardContent, Typography, Button, TextField, InputAdornment, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Avatar, IconButton, Stack, Skeleton, Pagination, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, Grid, MenuItem, Alert, CircularProgress } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import PersonIcon from '@mui/icons-material/Person';
-import { useQuery } from 'react-query';
+import CloseIcon from '@mui/icons-material/Close';
+import { useQuery, useQueryClient } from 'react-query';
 import { format, differenceInYears, parseISO } from 'date-fns';
 import { apiClient } from '../utils/apiClient';
 import { MC_COLORS } from '../styles/theme';
 
 const GENDER_COLOR: Record<string, string> = { male: MC_COLORS.teal[500], female: MC_COLORS.emerald[500], other: MC_COLORS.status.info };
 
+const EMPTY_FORM = { firstName: '', lastName: '', email: '', phone: '', dateOfBirth: '', gender: 'male', bloodGroup: '', address: '' };
+
 export default function PatientsPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [formSuccess, setFormSuccess] = useState('');
   const LIMIT = 15;
 
   const { data, isLoading } = useQuery(
@@ -27,6 +36,39 @@ export default function PatientsPage() {
   const patients = data?.patients || [];
   const total = data?.total || 0;
 
+  function update(key: string) {
+    return (e: React.ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, [key]: e.target.value }));
+  }
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.firstName || !form.lastName) { setFormError('First and last name are required'); return; }
+    setSaving(true);
+    setFormError('');
+    try {
+      await apiClient.post('/patients', {
+        firstName: form.firstName,
+        lastName: form.lastName,
+        email: form.email || undefined,
+        phone: form.phone || undefined,
+        dateOfBirth: form.dateOfBirth || undefined,
+        gender: form.gender,
+        bloodGroup: form.bloodGroup || undefined,
+        address: form.address || undefined,
+      });
+      setFormSuccess('Patient registered successfully!');
+      queryClient.invalidateQueries('patients');
+      setTimeout(() => { setOpen(false); setForm(EMPTY_FORM); setFormSuccess(''); }, 1500);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message || 'Failed to register patient';
+      setFormError(msg);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function handleClose() { setOpen(false); setForm(EMPTY_FORM); setFormError(''); setFormSuccess(''); }
+
   return (
     <Box>
       <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'center' }} spacing={2} mb={4}>
@@ -34,7 +76,7 @@ export default function PatientsPage() {
           <Typography variant="h4" fontWeight={700}>Patient Registry</Typography>
           <Typography variant="body2" color="text.secondary" mt={0.5}>{total.toLocaleString()} total patients</Typography>
         </Box>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate('/patients/new')}>New Patient</Button>
+        <Button variant="contained" startIcon={<AddIcon />} onClick={() => setOpen(true)}>New Patient</Button>
       </Stack>
 
       <Card>
@@ -72,7 +114,7 @@ export default function PatientsPage() {
                     ? (
                       <TableRow>
                         <TableCell colSpan={7} sx={{ textAlign: 'center', py: 8, color: 'text.secondary' }}>
-                          <PersonIcon sx={{ fontSize: 48, mb: 1, color: 'text.disabled' }} />
+                          <PersonIcon sx={{ fontSize: 48, mb: 1, color: 'text.disabled', display: 'block', mx: 'auto' }} />
                           <Typography>No patients found</Typography>
                         </TableCell>
                       </TableRow>
@@ -119,6 +161,49 @@ export default function PatientsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* New Patient Dialog */}
+      <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Typography variant="h6" fontWeight={700}>Register New Patient</Typography>
+            <IconButton size="small" onClick={handleClose}><CloseIcon fontSize="small" /></IconButton>
+          </Stack>
+        </DialogTitle>
+        <form onSubmit={handleCreate}>
+          <DialogContent dividers>
+            {formError && <Alert severity="error" sx={{ mb: 2 }}>{formError}</Alert>}
+            {formSuccess && <Alert severity="success" sx={{ mb: 2 }}>{formSuccess}</Alert>}
+            <Grid container spacing={2}>
+              <Grid item xs={6}><TextField label="First Name" value={form.firstName} onChange={update('firstName')} fullWidth required autoFocus /></Grid>
+              <Grid item xs={6}><TextField label="Last Name" value={form.lastName} onChange={update('lastName')} fullWidth required /></Grid>
+              <Grid item xs={12}><TextField label="Email" type="email" value={form.email} onChange={update('email')} fullWidth /></Grid>
+              <Grid item xs={6}><TextField label="Phone" value={form.phone} onChange={update('phone')} fullWidth placeholder="+1 555 000 0000" /></Grid>
+              <Grid item xs={6}><TextField label="Date of Birth" type="date" value={form.dateOfBirth} onChange={update('dateOfBirth')} fullWidth InputLabelProps={{ shrink: true }} /></Grid>
+              <Grid item xs={6}>
+                <TextField select label="Gender" value={form.gender} onChange={update('gender')} fullWidth>
+                  <MenuItem value="male">Male</MenuItem>
+                  <MenuItem value="female">Female</MenuItem>
+                  <MenuItem value="other">Other</MenuItem>
+                </TextField>
+              </Grid>
+              <Grid item xs={6}>
+                <TextField select label="Blood Group" value={form.bloodGroup} onChange={update('bloodGroup')} fullWidth>
+                  <MenuItem value="">Unknown</MenuItem>
+                  {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((bg) => <MenuItem key={bg} value={bg}>{bg}</MenuItem>)}
+                </TextField>
+              </Grid>
+              <Grid item xs={12}><TextField label="Address" value={form.address} onChange={update('address')} fullWidth multiline rows={2} /></Grid>
+            </Grid>
+          </DialogContent>
+          <DialogActions sx={{ p: 2 }}>
+            <Button onClick={handleClose} disabled={saving}>Cancel</Button>
+            <Button type="submit" variant="contained" disabled={saving} startIcon={saving ? <CircularProgress size={16} /> : null}>
+              {saving ? 'Registering...' : 'Register Patient'}
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
     </Box>
   );
 }
