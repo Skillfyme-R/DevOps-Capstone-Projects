@@ -39,7 +39,7 @@ export default function ProfilePage() {
           <Card>
             <CardContent sx={{ p: 3, textAlign: 'center' }}>
               <Avatar sx={{ width: 80, height: 80, bgcolor: MC_COLORS.teal[500], fontSize: '1.75rem', mx: 'auto', mb: 2 }}>
-                {user.firstName[0]}{user.lastName[0]}
+                {user.firstName?.[0]}{user.lastName?.[0]}
               </Avatar>
               <Typography variant="h6" fontWeight={700}>{user.firstName} {user.lastName}</Typography>
               <Typography variant="body2" color="text.secondary" mb={1}>{user.email}</Typography>
