@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
-import { Box, Button, Card, CardContent, TextField, Typography, Alert, CircularProgress, InputAdornment, IconButton, Stack, Divider, Link } from '@mui/material';
+import { Box, Button, Card, CardContent, TextField, Typography, Alert, CircularProgress, InputAdornment, IconButton, Stack, Link } from '@mui/material';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
@@ -91,28 +91,6 @@ export default function LoginPage() {
                 </Button>
               </Stack>
             </form>
-
-            <Divider sx={{ my: 3 }}>
-              <Typography variant="caption" color="text.secondary">Demo Credentials</Typography>
-            </Divider>
-
-            <Box sx={{ bgcolor: 'action.hover', borderRadius: 2, p: 2 }}>
-              <Typography variant="caption" color="text.secondary" display="block" mb={1} fontWeight={600}>Quick access for demo:</Typography>
-              {[
-                { role: 'Super Admin', email: 'superadmin@medicore.health' },
-                { role: 'Clinician', email: 'dr.smith@medicore.health' },
-                { role: 'Patient', email: 'patient@medicore.health' },
-              ].map((d) => (
-                <Box key={d.role} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5 }}>
-                  <Typography variant="caption" color="text.secondary">{d.role}</Typography>
-                  <Button size="small" variant="text" sx={{ fontSize: '0.7rem', p: 0.5, minWidth: 0 }}
-                    onClick={() => { setEmail(d.email); setPassword('MediCore@2025!'); }}>
-                    Use
-                  </Button>
-                </Box>
-              ))}
-              <Typography variant="caption" color="text.secondary">Password: <strong>MediCore@2025!</strong></Typography>
-            </Box>
 
             <Box textAlign="center" mt={3}>
               <Typography variant="body2" color="text.secondary">
