@@ -170,7 +170,7 @@ export default function AppointmentsPage() {
               </Grid>
               <Grid item xs={6}>
                 <TextField select label="Type" value={form.type} onChange={update('type')} fullWidth>
-                  {['consultation', 'follow_up', 'emergency', 'routine_checkup', 'specialist', 'telemedicine', 'procedure'].map((t) => (
+                  {['consultation', 'follow_up', 'procedure', 'lab', 'imaging', 'telemedicine', 'emergency'].map((t) => (
                     <MenuItem key={t} value={t}>{t.replace('_', ' ')}</MenuItem>
                   ))}
                 </TextField>

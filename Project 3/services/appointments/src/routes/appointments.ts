@@ -28,7 +28,10 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
   const { patientId, physicianId, facilityId, status, from, to, page = 1, limit = 20 } = req.query;
   const offset = (Number(page) - 1) * Number(limit);
 
-  const baseWhere: Record<string, unknown> = { 'mc_appointments.is_cancelled': false };
+  const baseWhere: Record<string, unknown> = {};
+
+  // Only hide cancelled when no specific status is requested
+  if (!status) baseWhere['mc_appointments.is_cancelled'] = false;
 
   if (req.user?.role === 'patient') {
     const patient = await db('mc_patients').where({ user_id: req.user.sub }).first();
