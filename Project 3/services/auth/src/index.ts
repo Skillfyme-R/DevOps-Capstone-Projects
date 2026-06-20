@@ -24,7 +24,11 @@ async function bootstrap() {
 
   app.use(helmet({ contentSecurityPolicy: { directives: { defaultSrc: ["'self'"] } } }));
   app.use(compression());
-  app.use(cors({ origin: config.cors.allowedOrigins, credentials: true }));
+  const isDev = config.platform.environment === 'development';
+  app.use(cors({
+    origin: isDev ? /^http:\/\/localhost:\d+$/ : config.cors.allowedOrigins,
+    credentials: true,
+  }));
   app.use(express.json({ limit: '10kb' }));
   app.use(express.urlencoded({ extended: true }));
   app.use(morgan('combined', { stream: { write: (msg) => logger.http(msg.trim()) } }));
