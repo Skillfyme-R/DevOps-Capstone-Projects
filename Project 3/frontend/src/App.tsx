@@ -17,8 +17,8 @@ const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
-interface AuthContextValue { user: AuthUser | null; loading: boolean; logout: () => Promise<void>; }
-export const AuthContext = createContext<AuthContextValue>({ user: null, loading: false, logout: async () => {} });
+interface AuthContextValue { user: AuthUser | null; loading: boolean; logout: () => Promise<void>; login: (email: string, password: string) => Promise<unknown>; }
+export const AuthContext = createContext<AuthContextValue>({ user: null, loading: false, logout: async () => {}, login: async () => {} });
 export const useAuthContext = () => useContext(AuthContext);
 
 function Loader() {
@@ -30,8 +30,7 @@ function Loader() {
 }
 
 function ProtectedRoute({ children, roles }: { children: React.ReactNode; roles?: AuthUser['role'][] }) {
-  const { user, loading, initialized } = useAuth() as typeof useAuth extends () => infer R ? R : never;
-  if (!('initialized' in { initialized: true })) return <Loader />;
+  const { user, loading } = useAuth() as typeof useAuth extends () => infer R ? R : never;
   if (loading) return <Loader />;
   if (!user) return <Navigate to="/login" replace />;
   if (roles && !roles.includes(user.role)) return <Navigate to="/dashboard" replace />;

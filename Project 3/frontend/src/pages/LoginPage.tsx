@@ -116,7 +116,7 @@ export default function LoginPage() {
 
             <Box textAlign="center" mt={3}>
               <Typography variant="body2" color="text.secondary">
-                Don't have an account?{' '}
+                Don&apos;t have an account?{' '}
                 <Link component={RouterLink} to="/register" fontWeight={600} color="primary.main">Sign up</Link>
               </Typography>
             </Box>

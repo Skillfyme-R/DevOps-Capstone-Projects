@@ -1,6 +1,9 @@
 import fs from 'fs';
 import path from 'path';
 import yaml from 'yaml';
+import dotenv from 'dotenv';
+
+dotenv.config({ path: path.resolve(__dirname, '../../../../.env') });
 
 export interface AppConfig {
   platform: { name: string; version: string; environment: string };
@@ -14,7 +17,11 @@ export interface AppConfig {
 
 function resolveEnvVars(obj: unknown): unknown {
   if (typeof obj === 'string') {
-    return obj.replace(/\$\{([^}]+)\}/g, (_, key) => process.env[key] ?? '');
+    const resolved = obj.replace(/\$\{([^}]+)\}/g, (_, key) => process.env[key] ?? '');
+    if (resolved === 'true') return true;
+    if (resolved === 'false') return false;
+    if (resolved !== '' && !isNaN(Number(resolved))) return Number(resolved);
+    return resolved;
   }
   if (Array.isArray(obj)) return obj.map(resolveEnvVars);
   if (obj && typeof obj === 'object') {
@@ -27,5 +34,12 @@ export function loadConfig(): AppConfig {
   const configPath = path.resolve(__dirname, '../../../../app-config.yaml');
   const raw = fs.readFileSync(configPath, 'utf8');
   const parsed = yaml.parse(raw);
-  return resolveEnvVars(parsed) as AppConfig;
+  const resolved = resolveEnvVars(parsed) as Record<string, unknown>;
+
+  // YAML nests cors under gateway — hoist it to top level for service use
+  if (!resolved.cors && resolved.gateway) {
+    resolved.cors = (resolved.gateway as Record<string, unknown>).cors;
+  }
+
+  return resolved as unknown as AppConfig;
 }

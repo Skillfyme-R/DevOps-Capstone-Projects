@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Card, CardContent, Typography, Grid, Stack, Chip, Skeleton, Alert } from '@mui/material';
+import { Box, Card, CardContent, Typography, Grid, Skeleton, Alert } from '@mui/material';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, Legend } from 'recharts';
 import { useQuery } from 'react-query';
 import { apiClient } from '../utils/apiClient';
@@ -8,11 +8,11 @@ import { MC_COLORS } from '../styles/theme';
 const CONDITION_COLORS = [MC_COLORS.teal[500], MC_COLORS.emerald[500], MC_COLORS.status.info, MC_COLORS.status.warning, MC_COLORS.status.pending, MC_COLORS.status.critical];
 
 export default function AnalyticsPage() {
-  const { data: summary } = useQuery('analytics-summary', () => apiClient.get('/analytics/summary').then((r) => r.data), { retry: false });
-  const { data: trend } = useQuery('analytics-trend', () => apiClient.get('/analytics/appointments/trend?days=30').then((r) => r.data), { retry: false });
-  const { data: kpis } = useQuery('analytics-kpis', () => apiClient.get('/analytics/operational/kpis').then((r) => r.data), { retry: false });
-  const { data: conditions } = useQuery('analytics-conditions', () => apiClient.get('/analytics/clinical/conditions').then((r) => r.data), { retry: false });
-  const { data: demographics } = useQuery('analytics-demographics', () => apiClient.get('/analytics/patients/demographics').then((r) => r.data), { retry: false });
+  const { data: summary } = useQuery('analytics-summary', () => apiClient.get('/analytics/summary').then((r: { data: any }) => r.data), { retry: false });
+  const { data: trend } = useQuery('analytics-trend', () => apiClient.get('/analytics/appointments/trend?days=30').then((r: { data: any }) => r.data), { retry: false });
+  const { data: kpis } = useQuery('analytics-kpis', () => apiClient.get('/analytics/operational/kpis').then((r: { data: any }) => r.data), { retry: false });
+  const { data: conditions } = useQuery('analytics-conditions', () => apiClient.get('/analytics/clinical/conditions').then((r: { data: any }) => r.data), { retry: false });
+  const { data: demographics } = useQuery('analytics-demographics', () => apiClient.get('/analytics/patients/demographics').then((r: { data: any }) => r.data), { retry: false });
 
   const trendData = trend?.trend || [];
   const topConditions = conditions?.topConditions?.slice(0, 8) || [];

@@ -27,9 +27,9 @@ const SYSTEM_STATUS = [
 ];
 
 export default function AdminPage() {
-  const { data: users, isLoading, error } = useQuery(
+  const { data: users, isLoading, isError } = useQuery(
     'admin-users',
-    () => apiClient.get('/auth/users').then((r) => r.data),
+    () => apiClient.get('/auth/users').then((r: { data: any }) => r.data),
     { retry: false }
   );
 
@@ -73,8 +73,8 @@ export default function AdminPage() {
                 <Typography variant="h6" fontWeight={700}>User Management</Typography>
                 <Button size="small" variant="contained">+ Invite User</Button>
               </Stack>
-              {error && <Alert severity="error">Could not load users — check admin permissions.</Alert>}
-              {!error && (
+              {isError && <Alert severity="error">Could not load users — check admin permissions.</Alert>}
+              {!isError && (
                 <TableContainer>
                   <Table size="small">
                     <TableHead>

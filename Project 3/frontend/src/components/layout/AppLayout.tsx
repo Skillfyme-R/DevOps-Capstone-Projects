@@ -22,7 +22,7 @@ export default function AppLayout() {
         collapsed={collapsed}
         mobileOpen={mobileOpen}
         onMobileClose={() => setMobileOpen(false)}
-        onCollapse={() => setCollapsed((c) => !c)}
+        onCollapse={() => setCollapsed((c: boolean) => !c)}
       />
       <Box
         component="main"
@@ -35,7 +35,7 @@ export default function AppLayout() {
           minHeight: '100vh',
         }}
       >
-        <TopBar onMenuClick={() => (isMobile ? setMobileOpen(true) : setCollapsed((c) => !c))} />
+        <TopBar onMenuClick={() => (isMobile ? setMobileOpen(true) : setCollapsed((c: boolean) => !c))} />
         <Box sx={{ flexGrow: 1, p: { xs: 2, md: 3 }, maxWidth: 1400, width: '100%', mx: 'auto' }}>
           <Outlet />
         </Box>

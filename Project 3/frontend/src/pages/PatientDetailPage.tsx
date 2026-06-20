@@ -21,7 +21,7 @@ export default function PatientDetailPage() {
 
   const { data, isLoading, error } = useQuery(
     ['patient', id],
-    () => apiClient.get(`/patients/${id}`).then((r) => r.data),
+    () => apiClient.get(`/patients/${id}`).then((r: { data: any }) => r.data),
     { retry: false }
   );
 

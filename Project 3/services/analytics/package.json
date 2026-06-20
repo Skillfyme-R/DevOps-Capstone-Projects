@@ -5,7 +5,7 @@
   "private": true,
   "main": "dist/index.js",
   "scripts": {
-    "start:dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "start:dev": "ts-node-dev --respawn --transpile-only ./src/index.ts",
     "build": "tsc --project tsconfig.json",
     "start": "node dist/index.js",
     "type-check": "tsc --noEmit",
@@ -17,6 +17,7 @@
   "dependencies": {
     "compression": "^1.7.4",
     "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "express-async-errors": "^3.1.1",
     "helmet": "^7.0.0",

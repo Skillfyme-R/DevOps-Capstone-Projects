@@ -61,7 +61,7 @@ export default function DashboardPage() {
 
   const { data: summary, isLoading } = useQuery(
     'analytics-summary',
-    () => apiClient.get('/analytics/summary').then((r) => r.data),
+    () => apiClient.get('/analytics/summary').then((r: { data: any }) => r.data),
     { enabled: isAdmin, retry: false }
   );
 
@@ -72,7 +72,7 @@ export default function DashboardPage() {
       <Box mb={4}>
         <Typography variant="h4" fontWeight={700}>Welcome back, {user?.firstName} 👋</Typography>
         <Typography variant="body1" color="text.secondary" mt={0.5}>
-          Here's an overview of your healthcare operations for today.
+          Here&apos;s an overview of your healthcare operations for today.
         </Typography>
       </Box>
 

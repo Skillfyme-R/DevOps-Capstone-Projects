@@ -20,7 +20,7 @@ export default function PatientsPage() {
 
   const { data, isLoading } = useQuery(
     ['patients', search, page],
-    () => apiClient.get('/patients', { params: { search, page, limit: LIMIT } }).then((r) => r.data),
+    () => apiClient.get('/patients', { params: { search, page, limit: LIMIT } }).then((r: { data: any }) => r.data),
     { keepPreviousData: true, retry: false }
   );
 

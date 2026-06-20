@@ -19,7 +19,7 @@ function Root() {
   const [isDark, setIsDark] = useState(() => localStorage.getItem('mc-theme') === 'dark');
   const ctx = useMemo(() => ({
     isDark,
-    toggle: () => setIsDark((d) => { const next = !d; localStorage.setItem('mc-theme', next ? 'dark' : 'light'); return next; }),
+    toggle: () => setIsDark((d: boolean) => { const next = !d; localStorage.setItem('mc-theme', next ? 'dark' : 'light'); return next; }),
   }), [isDark]);
 
   return (

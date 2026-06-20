@@ -19,7 +19,7 @@ export default function AppointmentsPage() {
 
   const { data, isLoading } = useQuery(
     ['appointments', status, from],
-    () => apiClient.get('/appointments', { params: { status: status || undefined, from: from || undefined, limit: 30 } }).then((r) => r.data),
+    () => apiClient.get('/appointments', { params: { status: status || undefined, from: from || undefined, limit: 30 } }).then((r: { data: any }) => r.data),
     { retry: false }
   );
 
