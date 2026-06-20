@@ -15,6 +15,7 @@ import { logger } from './utils/logger';
 import appointmentRoutes from './routes/appointments';
 import slotRoutes from './routes/slots';
 import healthRoutes from './routes/health';
+import { startScheduler } from './services/scheduler';
 
 async function bootstrap() {
   const config = loadConfig();
@@ -41,7 +42,10 @@ async function bootstrap() {
   app.use(errorHandler);
 
   const port = Number(process.env.APPOINTMENT_SERVICE_PORT) || 9003;
-  app.listen(port, () => logger.info(`MediCore Appointment Service listening on port ${port}`));
+  app.listen(port, () => {
+    logger.info(`MediCore Appointment Service listening on port ${port}`);
+    startScheduler();
+  });
 }
 
 bootstrap().catch((err) => { console.error(err); process.exit(1); });

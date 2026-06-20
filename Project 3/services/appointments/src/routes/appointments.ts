@@ -58,32 +58,6 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
     db('mc_appointments').select('mc_appointments.*').where(baseWhere)
   ).orderBy('mc_appointments.scheduled_at').limit(Number(limit)).offset(offset);
 
-  // Auto-progress status based on current time (only for confirmed/checked_in)
-  const now = new Date();
-  const autoUpdates = appointments
-    .filter((a: Record<string, any>) => ['confirmed', 'scheduled'].includes(a.status))
-    .filter((a: Record<string, any>) => {
-      const start = new Date(a.scheduled_at);
-      const end = new Date(start.getTime() + a.duration_minutes * 60000);
-      if (now >= end) return true;       // past end → complete
-      if (now >= start) return true;     // during → in_progress
-      return false;
-    });
-
-  if (autoUpdates.length > 0) {
-    await Promise.all(autoUpdates.map((a: Record<string, any>) => {
-      const start = new Date(a.scheduled_at);
-      const end = new Date(start.getTime() + a.duration_minutes * 60000);
-      const autoStatus = now >= end ? 'completed' : 'in_progress';
-      return db('mc_appointments').where({ id: a.id }).update({ status: autoStatus, updated_at: new Date() });
-    }));
-    // Re-fetch with updated statuses
-    const refreshed = await applyDateFilters(
-      db('mc_appointments').select('mc_appointments.*').where(baseWhere)
-    ).orderBy('mc_appointments.scheduled_at').limit(Number(limit)).offset(offset);
-    return res.json({ appointments: refreshed, total: Number((countRow as any)?.count || 0), page: Number(page), limit: Number(limit) });
-  }
-
   res.json({ appointments, total: Number((countRow as any)?.count || 0), page: Number(page), limit: Number(limit) });
 });
 
