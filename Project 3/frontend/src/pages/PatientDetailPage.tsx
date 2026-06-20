@@ -8,7 +8,7 @@ import WarningIcon from '@mui/icons-material/Warning';
 import MedicationIcon from '@mui/icons-material/Medication';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import { useQuery } from 'react-query';
-import { format, differenceInYears, parseISO } from 'date-fns';
+import { differenceInYears, parseISO } from 'date-fns';
 import { patientsClient } from '../utils/apiClient';
 import { MC_COLORS } from '../styles/theme';
 

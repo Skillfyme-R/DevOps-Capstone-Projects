@@ -7,7 +7,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import PersonIcon from '@mui/icons-material/Person';
 import CloseIcon from '@mui/icons-material/Close';
 import { useQuery, useQueryClient } from 'react-query';
-import { format, differenceInYears, parseISO } from 'date-fns';
+import { differenceInYears, parseISO } from 'date-fns';
 import { patientsClient } from '../utils/apiClient';
 import { MC_COLORS } from '../styles/theme';
 
