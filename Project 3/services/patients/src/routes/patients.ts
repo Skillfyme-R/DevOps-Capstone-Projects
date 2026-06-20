@@ -46,11 +46,12 @@ router.get('/', authenticate, requireRole('clinician', 'nurse', 'admin', 'supera
   const { search, page = 1, limit = 20, facilityId } = req.query;
   const offset = (Number(page) - 1) * Number(limit);
 
-  let query = db('mc_patients').select('*').where({ is_deleted: false });
+  const filters: Record<string, unknown> = { is_deleted: false };
+  if (facilityId) filters.facility_id = facilityId;
 
-  if (facilityId) query = query.where({ facility_id: facilityId });
-  if (search) {
-    query = query.where((b) =>
+  function applySearch(q: ReturnType<typeof db>) {
+    if (!search) return q;
+    return q.where((b: ReturnType<typeof db>) =>
       b.whereILike('first_name', `%${search}%`)
         .orWhereILike('last_name', `%${search}%`)
         .orWhereILike('mrn', `%${search}%`)
@@ -58,10 +59,11 @@ router.get('/', authenticate, requireRole('clinician', 'nurse', 'admin', 'supera
     );
   }
 
-  const total = await query.clone().count('id as count').first();
-  const patients = await query.orderBy('last_name').limit(Number(limit)).offset(offset);
+  const countRow = await applySearch(db('mc_patients').where(filters).count('id as count')).first();
+  const patients = await applySearch(db('mc_patients').select('*').where(filters))
+    .orderBy('last_name').limit(Number(limit)).offset(offset);
 
-  res.json({ patients, total: Number(total?.count || 0), page: Number(page), limit: Number(limit) });
+  res.json({ patients, total: Number((countRow as any)?.count || 0), page: Number(page), limit: Number(limit) });
 });
 
 router.get('/:id', authenticate, async (req: Request, res: Response) => {
