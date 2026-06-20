@@ -1143,8 +1143,4 @@ Failed login attempts are tracked in the `mc_users.failed_login_attempts` column
 
 ## 17. License
 
-This project is licensed under the proprietary license of **Learnsyte Learning Private Limited (Skillfyme)**.
-
-All rights reserved. Unauthorised reproduction, distribution, or use of this project or any portion thereof is strictly prohibited without explicit written permission from Learnsyte Learning Private Limited.
-
-For licensing inquiries, contact: [legal@skillfyme.in](mailto:legal@skillfyme.in)
+Learnsyte Learning Private Limited (Skillfyme).

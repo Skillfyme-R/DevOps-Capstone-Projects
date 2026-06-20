@@ -1288,19 +1288,4 @@ terraform apply tfplan
 
 ## 17. License
 
-This project is developed and maintained by **Learnsyte Learning Private Limited (Skillfyme)**.
-
-All rights reserved. Unauthorised reproduction, distribution, or modification of this codebase or its documentation is strictly prohibited without prior written consent from Learnsyte Learning Private Limited.
-
-| | |
-|---|---|
-| **Organisation** | Learnsyte Learning Private Limited |
-| **Brand** | Skillfyme |
-| **Website** | [skillfyme.in](https://skillfyme.in) |
-| **Repository** | [github.com/Skillfyme-R/DevOps-Capstone-Projects](https://github.com/Skillfyme-R/DevOps-Capstone-Projects) |
-
----
-
-<div align="center">
-  <strong>NexusFinance — Enterprise Digital Banking, built with production-grade engineering by Skillfyme</strong>
-</div>
+Learnsyte Learning Private Limited (Skillfyme).
