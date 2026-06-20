@@ -45,8 +45,8 @@ export default function ProfilePage() {
   const pct = Math.round((completeness.filter((c) => c.done).length / completeness.length) * 100);
 
   function startEditing() {
-    setFirstName(user.firstName || '');
-    setLastName(user.lastName || '');
+    setFirstName(user?.firstName || '');
+    setLastName(user?.lastName || '');
     setPhone('');
     setEditing(true);
     setSaved(false);
