@@ -1,0 +1,91 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: vendorvault-services
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: vendorvault-idp
+spec:
+  # ── Generator: one Application per service × environment ─────────────────
+  # This is the IDP pattern — adding a new service to the list below
+  # automatically creates staging + production ArgoCD Applications.
+  # Developers self-serve by editing this list in a PR.
+  generators:
+    - matrix:
+        generators:
+          # Services (teams add their service here to onboard to the IDP)
+          - list:
+              elements:
+                - service: backend
+                  team:    platform
+                  port:    "8008"
+                - service: frontend
+                  team:    platform
+                  port:    "3000"
+                - service: catalog
+                  team:    catalog-team
+                  port:    "8010"
+                - service: orders
+                  team:    fulfillment-team
+                  port:    "8011"
+                - service: vendors
+                  team:    vendor-team
+                  port:    "8012"
+                - service: payments
+                  team:    payments-team
+                  port:    "8013"
+
+          # Environments
+          - list:
+              elements:
+                - env:       staging
+                  namespace: vendorvault-staging
+                  branch:    develop
+                  replicas:  "1"
+                - env:       production
+                  namespace: vendorvault-production
+                  branch:    main
+                  replicas:  "2"
+
+  # ── Application template ──────────────────────────────────────────────────
+  template:
+    metadata:
+      name: 'vendorvault-{{service}}-{{env}}'
+      namespace: argocd
+      labels:
+        app.kubernetes.io/name:       '{{service}}'
+        app.kubernetes.io/part-of:    vendorvault-idp
+        vendorvault.io/team:          '{{team}}'
+        vendorvault.io/environment:   '{{env}}'
+      annotations:
+        # IDP metadata — visible in ArgoCD UI and developer portal
+        vendorvault.io/service-owner: '{{team}}'
+        vendorvault.io/docs-url:      'https://docs.vendorvault.local/services/{{service}}'
+        vendorvault.io/runbook-url:   'https://docs.vendorvault.local/runbooks/{{service}}'
+        notifications.argoproj.io/subscribe.on-sync-failed.slack: '{{team}}-alerts'
+
+    spec:
+      project: vendorvault-idp
+
+      source:
+        repoURL:        https://github.com/your-org/vendorvault-platform.git
+        targetRevision: '{{branch}}'
+        path:           'infrastructure/kubernetes/overlays/{{env}}'
+
+      destination:
+        server:    https://kubernetes.default.svc
+        namespace: '{{namespace}}'
+
+      syncPolicy:
+        automated:
+          prune:     true
+          selfHeal:  true
+        syncOptions:
+          - CreateNamespace=true
+          - ApplyOutOfSyncOnly=true   # Only sync changed resources (faster)
+        retry:
+          limit: 3
+          backoff:
+            duration:    10s
+            factor:      2
+            maxDuration: 2m

@@ -1,0 +1,75 @@
+# =============================================================================
+# VendorVault — Infrastructure Only (PostgreSQL + Redis + Elasticsearch)
+#
+# Use this for LOCAL DEVELOPMENT with hot-reload:
+#   yarn start:backend   (from terminal, with live reload)
+#   yarn start:app       (from terminal, with CRA dev server)
+#
+# Start:  docker compose -f infrastructure/docker/docker-compose.infra.yml up -d
+# Stop:   docker compose -f infrastructure/docker/docker-compose.infra.yml down
+# =============================================================================
+
+version: '3.9'
+
+services:
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: vendorvault-postgres
+    environment:
+      POSTGRES_USER:     vv_user
+      POSTGRES_PASSWORD: vv_dev_password
+      POSTGRES_DB:       vendorvault_dev
+    ports:
+      - "5433:5432"
+    volumes:
+      - vv_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vv_user -d vendorvault_dev"]
+      interval: 5s
+      timeout:  3s
+      retries:  10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: vendorvault-redis
+    command: >
+      redis-server
+      --requirepass vv_redis_dev_password
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    ports:
+      - "6381:6379"
+    volumes:
+      - vv_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "vv_redis_dev_password", "ping"]
+      interval: 5s
+      timeout:  3s
+      retries:  10
+    restart: unless-stopped
+
+  elasticsearch:
+    image: elasticsearch:8.9.0
+    container_name: vendorvault-elasticsearch
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - vv_es_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\\|yellow\"'"]
+      interval: 15s
+      timeout:  10s
+      retries:  10
+    restart: unless-stopped
+    profiles: [search]  # Only started with: docker-compose --profile search up
+
+volumes:
+  vv_postgres_data: { driver: local }
+  vv_redis_data:    { driver: local }
+  vv_es_data:       { driver: local }

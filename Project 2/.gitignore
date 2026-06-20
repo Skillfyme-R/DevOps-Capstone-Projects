@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+.yarn/cache
+.pnp.*
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Environment secrets
+.env
+.env.local
+app-config.local.yaml
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+*.swp
+
+# Testing
+coverage/
+
+# Docker volumes (locally generated)
+.docker-data/
+
+# Terraform state (use remote state in CI)
+infrastructure/terraform/**/*.tfstate
+infrastructure/terraform/**/*.tfstate.backup
+infrastructure/terraform/**/.terraform/

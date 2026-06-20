@@ -1,0 +1,186 @@
+# =============================================================================
+# VendorVault — Full Stack Docker Compose
+#
+# Starts the complete VendorVault platform locally with one command:
+#   yarn docker:up
+#
+# Services:
+#   postgres      — Product & order database (port 5433)
+#   redis         — Cart cache + session + rate limiting (port 6381)
+#   backend       — VendorVault API (port 8008)
+#   frontend      — React marketplace served by Nginx (port 3000)
+#   adminer       — Database UI (port 8080) — dev profile
+#   prometheus    — Metrics collector (port 9090)
+#   grafana       — Dashboards (port 4000)
+#
+# Usage:
+#   yarn docker:up        — Start all services
+#   yarn docker:down      — Stop all services
+#   yarn docker:logs      — Stream logs
+#   yarn db:migrate       — Run DB migrations (after postgres is healthy)
+#   yarn db:seed          — Load demo data
+# =============================================================================
+
+version: '3.9'
+
+services:
+
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: vendorvault-postgres
+    environment:
+      POSTGRES_USER:     vv_user
+      POSTGRES_PASSWORD: vv_dev_password
+      POSTGRES_DB:       vendorvault_dev
+    ports:
+      - "5433:5432"
+    volumes:
+      - vv_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vv_user -d vendorvault_dev"]
+      interval: 10s
+      timeout:  5s
+      retries:  5
+    networks:
+      - vv-network
+
+  # ── Redis ───────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: vendorvault-redis
+    command: >
+      redis-server
+      --requirepass vv_redis_dev_password
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    ports:
+      - "6381:6379"
+    volumes:
+      - vv_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "vv_redis_dev_password", "ping"]
+      interval: 10s
+      timeout:  5s
+      retries:  5
+    networks:
+      - vv-network
+
+  # ── Backend API ─────────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ../../
+      dockerfile: infrastructure/docker/Dockerfile.backend
+    container_name: vendorvault-backend
+    environment:
+      VV_ENVIRONMENT:      development
+      VV_DB_HOST:          postgres
+      VV_DB_PORT:          5432
+      VV_DB_USER:          vv_user
+      VV_DB_PASSWORD:      vv_dev_password
+      VV_DB_NAME:          vendorvault_dev
+      VV_REDIS_URL:        redis://:vv_redis_dev_password@redis:6379
+      VV_BACKEND_SECRET:   vv-dev-backend-secret-change-in-prod-64chars
+      VV_SESSION_SECRET:   vv-dev-session-secret-change-in-prod-64chars
+      STRIPE_PUBLIC_KEY:   pk_test_placeholder
+      STRIPE_SECRET_KEY:   sk_test_placeholder
+      STRIPE_WEBHOOK_SECRET: whsec_placeholder
+    ports:
+      - "8008:8008"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - vv_logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - vv-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8008/healthz/ready || exit 1"]
+      interval: 30s
+      timeout:  10s
+      retries:  3
+      start_period: 30s
+
+  # ── Frontend ────────────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ../../
+      dockerfile: infrastructure/docker/Dockerfile.app
+      args:
+        REACT_APP_API_URL: http://localhost:8008
+        REACT_APP_ENVIRONMENT: development
+        REACT_APP_VERSION: 1.0.0
+    container_name: vendorvault-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - vv-network
+
+  # ── Database Admin UI ────────────────────────────────────────────────────────
+  adminer:
+    image: adminer:4
+    container_name: vendorvault-adminer
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    networks:
+      - vv-network
+    profiles: [dev]
+
+  # ── Prometheus ───────────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.46.0
+    container_name: vendorvault-prometheus
+    volumes:
+      - ../monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../monitoring/prometheus/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
+      - vv_prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    networks:
+      - vv-network
+
+  # ── Grafana ──────────────────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:10.1.0
+    container_name: vendorvault-grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: vv_grafana_admin
+      GF_USERS_ALLOW_SIGN_UP:     "false"
+      GF_SERVER_ROOT_URL:          http://localhost:4000
+    volumes:
+      - vv_grafana_data:/var/lib/grafana
+      - ../monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+      - ../monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+    ports:
+      - "4000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - vv-network
+
+volumes:
+  vv_postgres_data:   { driver: local }
+  vv_redis_data:      { driver: local }
+  vv_logs:            { driver: local }
+  vv_prometheus_data: { driver: local }
+  vv_grafana_data:    { driver: local }
+
+networks:
+  vv-network:
+    driver: bridge
+    name: vendorvault-dev-network

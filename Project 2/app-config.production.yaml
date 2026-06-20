@@ -1,0 +1,28 @@
+# =============================================================================
+# VendorVault — Production Overrides
+# These values override app-config.yaml when VV_ENVIRONMENT=production
+# =============================================================================
+
+app:
+  baseUrl: https://app.vendorvault.io
+
+backend:
+  baseUrl: https://api.vendorvault.io
+  listen:
+    port: 8008
+  cors:
+    origin: https://app.vendorvault.io
+  database:
+    pool:
+      min: 5
+      max: 50
+    connection:
+      ssl:
+        rejectUnauthorized: true
+
+auth:
+  environment: production
+
+vendorvault:
+  platform:
+    environment: production

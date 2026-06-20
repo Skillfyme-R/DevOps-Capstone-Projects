@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vendorvault-production
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: vendorvault
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/your-org/vendorvault-platform.git
+    targetRevision: main
+    path: infrastructure/kubernetes/overlays/production
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vendorvault
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+    retry:
+      limit: 3
+      backoff:
+        duration:    10s
+        factor:      2
+        maxDuration: 5m

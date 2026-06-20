@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vendorvault-staging
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: vendorvault
+spec:
+  project: default
+
+  # ── Source: your local git repo ──────────────────────────────────────────
+  source:
+    # Change this to your local git remote or GitHub fork URL
+    repoURL: https://github.com/your-org/vendorvault-platform.git
+    targetRevision: develop
+    path: infrastructure/kubernetes/overlays/staging
+
+  # ── Destination: local k3d cluster ───────────────────────────────────────
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vendorvault
+
+  # ── Sync policy: auto-sync when manifests change ──────────────────────────
+  syncPolicy:
+    automated:
+      prune: true       # Remove resources deleted from git
+      selfHeal: true    # Revert manual kubectl changes
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+    retry:
+      limit: 5
+      backoff:
+        duration:    5s
+        factor:      2
+        maxDuration: 3m

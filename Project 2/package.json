@@ -1,0 +1,83 @@
+{
+  "name": "vendorvault-platform",
+  "version": "1.0.0",
+  "description": "VendorVault — Enterprise Multi-Vendor Marketplace Platform. Plugin-based monorepo enabling scalable e-commerce with vendor management, catalog intelligence, and real-time order fulfillment.",
+  "private": true,
+  "workspaces": {
+    "packages": [
+      "packages/*",
+      "plugins/*"
+    ]
+  },
+  "scripts": {
+    "start": "concurrently \"yarn start:app\" \"yarn start:backend\"",
+    "start:app": "yarn workspace @vendorvault/app start",
+    "start:backend": "yarn workspace @vendorvault/backend start:dev",
+    "build": "yarn workspaces run build",
+    "build:app": "yarn workspace @vendorvault/app build",
+    "build:backend": "yarn workspace @vendorvault/backend build",
+    "test": "yarn workspaces run test --passWithNoTests",
+    "test:ci": "jest --ci --coverage --passWithNoTests",
+    "lint": "eslint . --ext .ts,.tsx --max-warnings 0",
+    "lint:fix": "eslint . --ext .ts,.tsx --fix",
+    "type-check": "yarn workspaces run type-check",
+    "format": "prettier --write \"**/*.{ts,tsx,json,yaml,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,json,yaml,md}\"",
+    "clean": "yarn workspaces run clean && rm -rf node_modules",
+    "infra:up": "docker compose -f infrastructure/docker/docker-compose.infra.yml up -d",
+    "infra:down": "docker compose -f infrastructure/docker/docker-compose.infra.yml down",
+    "infra:logs": "docker compose -f infrastructure/docker/docker-compose.infra.yml logs -f",
+    "infra:status": "docker compose -f infrastructure/docker/docker-compose.infra.yml ps",
+    "docker:up": "docker compose -f infrastructure/docker/docker-compose.yml up -d",
+    "docker:down": "docker compose -f infrastructure/docker/docker-compose.yml down",
+    "docker:logs": "docker compose -f infrastructure/docker/docker-compose.yml logs -f",
+    "db:migrate": "knex migrate:latest --knexfile packages/backend/knexfile.js",
+    "db:rollback": "knex migrate:rollback --knexfile packages/backend/knexfile.js",
+    "db:seed": "knex seed:run --knexfile packages/backend/knexfile.js",
+    "k8s:deploy:dev": "kubectl apply -k infrastructure/kubernetes/overlays/dev",
+    "k8s:deploy:staging": "kubectl apply -k infrastructure/kubernetes/overlays/staging",
+    "k8s:deploy:prod": "kubectl apply -k infrastructure/kubernetes/overlays/prod"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.3.1",
+    "knex": "^3.0.1",
+    "pg": "^8.11.2",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.3",
+    "@types/node": "^18.17.0",
+    "@typescript-eslint/eslint-plugin": "^6.3.0",
+    "@typescript-eslint/parser": "^6.3.0",
+    "concurrently": "^8.2.0",
+    "eslint": "^8.47.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-import": "^2.28.0",
+    "eslint-plugin-react": "^7.33.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "jest": "^29.6.2",
+    "prettier": "^3.0.2",
+    "ts-jest": "^29.1.1",
+    "typescript": "^5.1.6"
+  },
+  "engines": {
+    "node": ">=18.12.0",
+    "yarn": ">=3.6.0"
+  },
+  "prettier": {
+    "singleQuote": true,
+    "trailingComma": "all",
+    "printWidth": 100,
+    "tabWidth": 2,
+    "semi": true
+  },
+  "jest": {
+    "projects": [
+      "<rootDir>/packages/app",
+      "<rootDir>/packages/backend",
+      "<rootDir>/plugins/*"
+    ]
+  },
+  "packageManager": "yarn@4.17.0+sha512.c2957de2f9025ab14d63b24d0d8be1f1655810e22c341042c27f7ecd017b180ec12db73d69ac366d71b304ef9f069349ce462de96f04f8f1da317f4f762c95ae"
+}

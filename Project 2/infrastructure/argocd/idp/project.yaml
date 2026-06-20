@@ -1,0 +1,59 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: vendorvault-idp
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: vendorvault-idp
+spec:
+  description: "VendorVault Internal Developer Platform — controls which teams can deploy which services to which environments"
+
+  # ── Source repos allowed ──────────────────────────────────────────────────
+  sourceRepos:
+    - 'https://github.com/your-org/vendorvault-platform.git'
+    - 'https://charts.helm.sh/stable'
+
+  # ── Allowed deployment destinations (local cluster only) ─────────────────
+  destinations:
+    - server:    https://kubernetes.default.svc
+      namespace: vendorvault
+    - server:    https://kubernetes.default.svc
+      namespace: vendorvault-staging
+    - server:    https://kubernetes.default.svc
+      namespace: vendorvault-production
+    - server:    https://kubernetes.default.svc
+      namespace: monitoring
+
+  # ── RBAC for developer roles ──────────────────────────────────────────────
+  roles:
+    - name: platform-admin
+      description: Full control — can deploy to any environment
+      policies:
+        - p, proj:vendorvault-idp:platform-admin, applications, *, vendorvault-idp/*, allow
+        - p, proj:vendorvault-idp:platform-admin, repositories, *, *, allow
+      groups:
+        - vendorvault:platform-admins
+
+    - name: developer
+      description: Developers — deploy to staging only, read-only on production
+      policies:
+        - p, proj:vendorvault-idp:developer, applications, get,    vendorvault-idp/*, allow
+        - p, proj:vendorvault-idp:developer, applications, sync,   vendorvault-idp/*-staging, allow
+        - p, proj:vendorvault-idp:developer, applications, create, vendorvault-idp/*-staging, allow
+      groups:
+        - vendorvault:developers
+
+    - name: vendor-team
+      description: Vendor service team — can only deploy vendor plugin
+      policies:
+        - p, proj:vendorvault-idp:vendor-team, applications, get,  vendorvault-idp/vendorvault-vendors-*, allow
+        - p, proj:vendorvault-idp:vendor-team, applications, sync, vendorvault-idp/vendorvault-vendors-staging, allow
+      groups:
+        - vendorvault:vendor-team
+
+  # ── Cluster-level resource allow list ────────────────────────────────────
+  clusterResourceWhitelist:
+    - group: ''
+      kind:  Namespace
+    - group: 'networking.k8s.io'
+      kind:  Ingress

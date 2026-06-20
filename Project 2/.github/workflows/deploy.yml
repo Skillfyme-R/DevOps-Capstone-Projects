@@ -1,0 +1,98 @@
+name: VendorVault Deploy (ArgoCD + Local k3d)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NO AWS REQUIRED — this pipeline deploys to a local Kubernetes cluster
+# (k3d or minikube) using ArgoCD GitOps.
+#
+# How it works:
+#   1. CI passes → this workflow builds Docker images into the local k3d registry
+#   2. ArgoCD (running inside the cluster) detects the image tag update in
+#      infrastructure/kubernetes/overlays/*/kustomization.yaml
+#   3. ArgoCD applies the manifests — no kubectl push needed from CI
+#
+# Local setup (one-time):
+#   ./scripts/local-cluster-setup.sh
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  workflow_run:
+    workflows: ["VendorVault CI Pipeline"]
+    types: [completed]
+    branches: [main, develop]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: staging
+        type: choice
+        options: [staging, production]
+
+jobs:
+  # ── Update image tags in k8s manifests ────────────────────────────────────
+  # ArgoCD watches the repo — updating the tag here triggers a sync
+  update-image-tags:
+    name: Update Image Tags for ArgoCD
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine environment
+        id: env
+        run: |
+          if [[ "${{ github.event.workflow_run.head_branch }}" == "main" ]] || \
+             [[ "${{ github.event.inputs.environment }}" == "production" ]]; then
+            echo "name=production" >> $GITHUB_OUTPUT
+            echo "overlay=infrastructure/kubernetes/overlays/production" >> $GITHUB_OUTPUT
+          else
+            echo "name=staging" >> $GITHUB_OUTPUT
+            echo "overlay=infrastructure/kubernetes/overlays/staging" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update kustomization image tags
+        run: |
+          IMAGE_TAG=${{ github.sha }}
+          OVERLAY=${{ steps.env.outputs.overlay }}
+
+          # kustomize edit sets the newTag in kustomization.yaml
+          # ArgoCD then picks up the change and syncs automatically
+          mkdir -p $OVERLAY
+          cat > $OVERLAY/kustomization.yaml << EOF
+          apiVersion: kustomize.config.k8s.io/v1beta1
+          kind: Kustomization
+          namespace: vendorvault
+          resources:
+            - ../../base
+          images:
+            - name: vendorvault-backend
+              newTag: "${IMAGE_TAG}"
+            - name: vendorvault-frontend
+              newTag: "${IMAGE_TAG}"
+          EOF
+
+      - name: Commit updated image tags
+        run: |
+          git config user.name  "VendorVault CI"
+          git config user.email "ci@vendorvault.local"
+          git add infrastructure/kubernetes/overlays/
+          git diff --cached --quiet || git commit -m "chore: deploy ${{ steps.env.outputs.name }} → ${{ github.sha }}"
+          git push
+
+  # ── ArgoCD sync status check ───────────────────────────────────────────────
+  verify-sync:
+    name: Verify ArgoCD Sync
+    runs-on: ubuntu-latest
+    needs: update-image-tags
+    if: github.event_name == 'workflow_dispatch'   # only when manually triggered from local
+    steps:
+      - name: Wait for ArgoCD to sync
+        run: |
+          echo "ArgoCD will automatically detect the manifest change and sync."
+          echo "Monitor sync at: http://localhost:8090 (ArgoCD UI)"
+          echo "Or run: argocd app get vendorvault-${{ github.event.inputs.environment }}"

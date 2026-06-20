@@ -1,0 +1,138 @@
+# =============================================================================
+# VendorVault Platform — Main Configuration File
+# All ${VAR} placeholders are replaced at runtime from environment variables.
+# Never hardcode secrets here. Use .env locally, secrets manager in prod.
+# =============================================================================
+
+app:
+  title: VendorVault Marketplace
+  baseUrl: http://localhost:3000
+
+organization:
+  name: VendorVault Inc.
+
+backend:
+  baseUrl: http://localhost:8008
+  listen:
+    port: 8008
+    host: 0.0.0.0
+  cors:
+    origin: http://localhost:3000
+    methods: [GET, HEAD, PATCH, POST, PUT, DELETE]
+    credentials: true
+  database:
+    client: pg
+    connection:
+      host:     ${VV_DB_HOST}
+      port:     ${VV_DB_PORT}
+      user:     ${VV_DB_USER}
+      password: ${VV_DB_PASSWORD}
+      database: ${VV_DB_NAME}
+    pool:
+      min: 2
+      max: 20
+  cache:
+    store: redis
+    connection: ${VV_REDIS_URL}
+
+# ---- Authentication Providers -----------------------------------------------
+auth:
+  environment: development
+  session:
+    secret: ${VV_SESSION_SECRET}
+  providers:
+    google:
+      development:
+        clientId:     ${AUTH_GOOGLE_CLIENT_ID}
+        clientSecret: ${AUTH_GOOGLE_CLIENT_SECRET}
+    github:
+      development:
+        clientId:     ${AUTH_GITHUB_CLIENT_ID}
+        clientSecret: ${AUTH_GITHUB_CLIENT_SECRET}
+
+# ---- Payment Integrations ---------------------------------------------------
+payments:
+  stripe:
+    publicKey:      ${STRIPE_PUBLIC_KEY}
+    secretKey:      ${STRIPE_SECRET_KEY}
+    webhookSecret:  ${STRIPE_WEBHOOK_SECRET}
+    connectEnabled: true          # Stripe Connect for marketplace payouts
+  paypal:
+    clientId:       ${PAYPAL_CLIENT_ID}
+    clientSecret:   ${PAYPAL_CLIENT_SECRET}
+    environment:    ${PAYPAL_ENV}    # sandbox | live
+  razorpay:
+    keyId:          ${RAZORPAY_KEY_ID}
+    keySecret:      ${RAZORPAY_KEY_SECRET}
+
+# ---- E-Commerce Business Rules ----------------------------------------------
+vendorvault:
+  platform:
+    name:        VendorVault
+    version:     "1.0.0"
+    environment: ${VV_ENVIRONMENT}    # development | staging | production
+  marketplace:
+    commissionRate:         0.12       # 12% platform fee on each sale
+    vendorPayoutDelay:      7          # days after order delivery
+    maxProductImages:       10
+    supportedCurrencies:    [USD, EUR, GBP, INR, CAD, AUD, SGD, AED]
+    defaultCurrency:        USD
+    taxCalculation:         true
+    multiVendorCart:        true       # Cart can hold items from multiple vendors
+    flashSaleEnabled:       true
+  catalog:
+    maxCategoriesDepth:     4
+    searchProvider:         elasticsearch
+    recommendationEngine:   true
+    inventoryTracking:      true
+    lowStockThreshold:      10
+  orders:
+    maxItemsPerOrder:       50
+    returnWindowDays:       30
+    autoConfirmDays:        3          # Auto-confirm if vendor doesn't act
+  shipping:
+    providers:              [fedex, ups, dhl, usps]
+    trackingEnabled:        true
+    internationalEnabled:   true
+  notifications:
+    emailProvider:  sendgrid
+    smsProvider:    twilio
+    pushEnabled:    true
+    fromEmail:      noreply@vendorvault.io
+    fromPhone:      ${TWILIO_FROM_NUMBER}
+
+# ---- Third-Party Services ---------------------------------------------------
+integrations:
+  sendgrid:
+    apiKey: ${SENDGRID_API_KEY}
+  twilio:
+    accountSid: ${TWILIO_ACCOUNT_SID}
+    authToken:  ${TWILIO_AUTH_TOKEN}
+  elasticsearch:
+    url:     ${ELASTICSEARCH_URL}
+    apiKey:  ${ELASTICSEARCH_API_KEY}
+    index:   vendorvault-products-${VV_ENVIRONMENT}
+  datadog:
+    apiKey: ${DATADOG_API_KEY}
+    appKey: ${DATADOG_APP_KEY}
+  sentry:
+    dsn: ${SENTRY_DSN}
+  cloudinary:
+    cloudName: ${CLOUDINARY_CLOUD_NAME}
+    apiKey:    ${CLOUDINARY_API_KEY}
+    apiSecret: ${CLOUDINARY_API_SECRET}
+
+# ---- AWS Cloud Resources ----------------------------------------------------
+aws:
+  region:    ${AWS_REGION}
+  accountId: ${AWS_ACCOUNT_ID}
+  s3:
+    productImagesBucket: vendorvault-product-images-${VV_ENVIRONMENT}
+    backupsBucket:       vendorvault-backups-${VV_ENVIRONMENT}
+    exportsBucket:       vendorvault-exports-${VV_ENVIRONMENT}
+  eks:
+    clusterName: vendorvault-${VV_ENVIRONMENT}
+  rds:
+    instanceId: vendorvault-db-${VV_ENVIRONMENT}
+  elasticache:
+    clusterId: vendorvault-cache-${VV_ENVIRONMENT}

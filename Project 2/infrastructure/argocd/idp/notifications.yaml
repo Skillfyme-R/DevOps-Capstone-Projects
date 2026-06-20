@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-notifications-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: vendorvault-idp
+data:
+  # ── Notification templates ─────────────────────────────────────────────────
+  template.app-deployed: |
+    message: |
+      ✅ *{{.app.metadata.name}}* deployed successfully
+      Environment: {{index .app.metadata.labels "vendorvault.io/environment"}}
+      Team: {{index .app.metadata.labels "vendorvault.io/team"}}
+      Revision: {{.app.status.sync.revision | trunc 7}}
+      ArgoCD: http://localhost:8090/applications/{{.app.metadata.name}}
+
+  template.app-sync-failed: |
+    message: |
+      ❌ *{{.app.metadata.name}}* sync FAILED
+      Environment: {{index .app.metadata.labels "vendorvault.io/environment"}}
+      Team: {{index .app.metadata.labels "vendorvault.io/team"}}
+      Error: {{.app.status.operationState.message}}
+      Action: Check ArgoCD UI → http://localhost:8090/applications/{{.app.metadata.name}}
+
+  template.app-health-degraded: |
+    message: |
+      ⚠️ *{{.app.metadata.name}}* health is DEGRADED
+      Environment: {{index .app.metadata.labels "vendorvault.io/environment"}}
+      Check pod logs: kubectl -n {{.app.spec.destination.namespace}} logs -l app={{index .app.metadata.labels "app.kubernetes.io/name"}}
+
+  # ── Triggers: when to fire notifications ──────────────────────────────────
+  trigger.on-deployed: |
+    - description: App synced and healthy
+      send: [app-deployed]
+      when: app.status.operationState.phase in ['Succeeded'] and app.status.health.status == 'Healthy'
+
+  trigger.on-sync-failed: |
+    - description: App sync failed
+      send: [app-sync-failed]
+      when: app.status.operationState.phase in ['Error', 'Failed']
+
+  trigger.on-health-degraded: |
+    - description: App health degraded
+      send: [app-health-degraded]
+      when: app.status.health.status == 'Degraded'
+
+  # ── Default subscriptions (applies to all apps) ───────────────────────────
+  defaultTriggers: |
+    - on-sync-failed
+    - on-health-degraded

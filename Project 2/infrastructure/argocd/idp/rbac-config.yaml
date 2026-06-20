@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-rbac-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: vendorvault-idp
+data:
+  # ── Default role for all logged-in users ──────────────────────────────────
+  policy.default: role:readonly
+
+  # ── IDP RBAC policies ─────────────────────────────────────────────────────
+  # Format: p, <role>, <resource>, <action>, <object>, <allow|deny>
+  policy.csv: |
+    # ── Platform Admins: full control ──────────────────────────────────────
+    p, role:platform-admin, applications, *,    */*, allow
+    p, role:platform-admin, clusters,     *,    *,   allow
+    p, role:platform-admin, repositories, *,    *,   allow
+    p, role:platform-admin, projects,     *,    *,   allow
+    p, role:platform-admin, accounts,     *,    *,   allow
+    g, vendorvault:platform-admins, role:platform-admin
+
+    # ── Developers: deploy to staging, read-only on production ─────────────
+    p, role:developer, applications, get,         */*, allow
+    p, role:developer, applications, sync,        */*-staging, allow
+    p, role:developer, applications, create,      */*-staging, allow
+    p, role:developer, applications, update,      */*-staging, allow
+    p, role:developer, applications, delete,      */*-staging, deny
+    p, role:developer, applications, override,    */*-staging, allow
+    p, role:developer, logs,         get,         */*, allow
+    p, role:developer, exec,         create,      */*-staging, allow
+    g, vendorvault:developers, role:developer
+
+    # ── Vendor Team: only their service ────────────────────────────────────
+    p, role:vendor-team, applications, get,    */vendorvault-vendors-*, allow
+    p, role:vendor-team, applications, sync,   */vendorvault-vendors-staging, allow
+    p, role:vendor-team, logs,         get,    */vendorvault-vendors-*, allow
+    g, vendorvault:vendor-team, role:vendor-team
+
+    # ── Payments Team: only their service ──────────────────────────────────
+    p, role:payments-team, applications, get,  */vendorvault-payments-*, allow
+    p, role:payments-team, applications, sync, */vendorvault-payments-staging, allow
+    p, role:payments-team, logs,         get,  */vendorvault-payments-*, allow
+    g, vendorvault:payments-team, role:payments-team
+
+  # ── OIDC / local user group mapping ───────────────────────────────────────
+  # For local dev: users are created via `argocd account create`
+  # In production: replace with your OIDC provider (GitHub SSO, Google, etc.)
+  scopes: '[groups, email]'

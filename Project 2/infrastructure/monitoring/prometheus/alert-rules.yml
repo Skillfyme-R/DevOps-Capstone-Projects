@@ -1,0 +1,89 @@
+groups:
+  - name: vendorvault-api
+    interval: 30s
+    rules:
+      - alert: HighErrorRate
+        expr: >
+          rate(vv_http_requests_total{status=~"5.."}[5m])
+          / rate(vv_http_requests_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          team:     backend
+        annotations:
+          summary:     "VendorVault API error rate > 5%"
+          description: "{{ $value | humanizePercentage }} of requests returning 5xx errors"
+
+      - alert: SlowAPIResponse
+        expr: >
+          histogram_quantile(0.99, rate(vv_http_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+          team:     backend
+        annotations:
+          summary:     "API p99 latency > 2 seconds"
+          description: "99th percentile response time is {{ $value }}s"
+
+      - alert: BackendDown
+        expr: up{job="vendorvault-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team:     platform
+        annotations:
+          summary:     "VendorVault backend is DOWN"
+          description: "Backend API has been unreachable for 1 minute"
+
+  - name: vendorvault-database
+    rules:
+      - alert: PostgresDown
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          team:     platform
+        annotations:
+          summary: "PostgreSQL is DOWN"
+
+      - alert: PostgresHighConnections
+        expr: pg_stat_database_numbackends / pg_settings_max_connections > 0.80
+        for: 5m
+        labels:
+          severity: warning
+          team:     platform
+        annotations:
+          summary:     "PostgreSQL connection pool > 80%"
+          description: "Connection pool at {{ $value | humanizePercentage }}"
+
+  - name: vendorvault-cache
+    rules:
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          team:     platform
+        annotations:
+          summary: "Redis cache is DOWN"
+
+      - alert: RedisHighMemory
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.90
+        for: 5m
+        labels:
+          severity: warning
+          team:     platform
+        annotations:
+          summary: "Redis memory usage > 90%"
+
+  - name: vendorvault-business
+    rules:
+      - alert: NoOrdersInLastHour
+        expr: increase(vv_http_requests_total{route="/api/v1/orders", method="POST", status="201"}[1h]) == 0
+        for: 0m
+        labels:
+          severity: warning
+          team:     product
+        annotations:
+          summary:     "No new orders in the last hour"
+          description: "This may indicate a checkout flow issue or payment processor outage"

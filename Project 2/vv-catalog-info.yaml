@@ -1,0 +1,54 @@
+apiVersion: vendorvault.io/v1alpha1
+kind: Platform
+metadata:
+  name: vendorvault-marketplace
+  namespace: production
+  labels:
+    platform: vendorvault
+    tier: marketplace
+    version: "1.0.0"
+spec:
+  title: VendorVault Marketplace Platform
+  description: >
+    Enterprise multi-vendor marketplace platform with real-time inventory,
+    intelligent catalog search, and automated vendor payout management.
+  owner: platform-engineering
+  type: marketplace
+  lifecycle: production
+  links:
+    - url: https://app.vendorvault.io
+      title: Marketplace App
+    - url: https://api.vendorvault.io/healthz
+      title: API Health
+    - url: https://grafana.vendorvault.io
+      title: Grafana Dashboards
+  tags:
+    - e-commerce
+    - marketplace
+    - multi-vendor
+    - typescript
+    - react
+    - nodejs
+    - postgresql
+    - redis
+  components:
+    - name: vv-frontend
+      type: website
+      lifecycle: production
+      owner: frontend-team
+    - name: vv-backend
+      type: service
+      lifecycle: production
+      owner: backend-team
+    - name: vv-catalog-plugin
+      type: library
+      lifecycle: production
+      owner: catalog-team
+    - name: vv-orders-plugin
+      type: library
+      lifecycle: production
+      owner: orders-team
+    - name: vv-vendors-plugin
+      type: library
+      lifecycle: production
+      owner: vendor-success-team
