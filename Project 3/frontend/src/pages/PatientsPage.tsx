@@ -50,11 +50,11 @@ export default function PatientsPage() {
         firstName: form.firstName,
         lastName: form.lastName,
         email: form.email || undefined,
-        phone: form.phone || undefined,
+        phone: form.phone ? form.phone.replace(/\s+/g, '') : undefined,
         dateOfBirth: form.dateOfBirth || undefined,
         gender: form.gender,
         bloodGroup: form.bloodGroup || undefined,
-        address: form.address || undefined,
+        address: form.address ? { line1: form.address, city: 'N/A', state: 'N/A', postalCode: '00000' } : undefined,
       });
       setFormSuccess('Patient registered successfully!');
       queryClient.invalidateQueries('patients');

@@ -11,7 +11,7 @@ const router = Router();
 const patientSchema = Joi.object({
   firstName: Joi.string().min(1).max(100).required(),
   lastName: Joi.string().min(1).max(100).required(),
-  dateOfBirth: Joi.string().isoDate().required(),
+  dateOfBirth: Joi.string().isoDate().optional(),
   gender: Joi.string().valid('male', 'female', 'other', 'unknown').required(),
   email: Joi.string().email().optional(),
   phone: Joi.string().optional(),
@@ -94,7 +94,7 @@ router.post('/', authenticate, requireRole('clinician', 'nurse', 'admin', 'super
     mrn,
     first_name: value.firstName,
     last_name: value.lastName,
-    date_of_birth: value.dateOfBirth,
+    date_of_birth: value.dateOfBirth || null,
     gender: value.gender,
     email: value.email || null,
     phone: value.phone || null,
