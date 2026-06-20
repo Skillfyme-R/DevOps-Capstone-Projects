@@ -1,0 +1,49 @@
+########################################
+# Stage 1 — Dependencies
+########################################
+FROM node:18-alpine AS deps
+WORKDIR /app
+RUN corepack enable && corepack prepare yarn@3.6.4 --activate
+COPY package.json yarn.lock .yarnrc.yml ./
+COPY services/${SERVICE}/package.json ./services/${SERVICE}/
+RUN yarn workspaces focus medicore-${SERVICE} --production=false
+
+########################################
+# Stage 2 — Build
+########################################
+FROM deps AS builder
+COPY tsconfig.json ./
+COPY app-config.yaml ./
+COPY services/${SERVICE}/tsconfig.json ./services/${SERVICE}/
+COPY services/${SERVICE}/src ./services/${SERVICE}/src
+RUN yarn workspace medicore-${SERVICE} build
+
+########################################
+# Stage 3 — Production runtime
+########################################
+FROM node:18-alpine AS runner
+LABEL org.opencontainers.image.title="MediCore ${SERVICE} Service"
+LABEL org.opencontainers.image.vendor="Learnsyte Learning Private Limited"
+LABEL org.opencontainers.image.licenses="Proprietary"
+
+RUN apk add --no-cache curl dumb-init && \
+    addgroup -S medicore && adduser -S medicore -G medicore
+
+WORKDIR /app
+ENV NODE_ENV=production
+
+COPY --from=builder --chown=medicore:medicore /app/services/${SERVICE}/dist ./dist
+COPY --from=builder --chown=medicore:medicore /app/node_modules ./node_modules
+COPY --from=builder --chown=medicore:medicore /app/app-config.yaml ./
+COPY --from=builder --chown=medicore:medicore /app/services/${SERVICE}/migrations ./migrations
+COPY --from=builder --chown=medicore:medicore /app/services/${SERVICE}/seeds ./seeds
+
+USER medicore
+
+EXPOSE ${SERVICE_PORT:-9001}
+
+HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=3 \
+  CMD curl -f http://localhost:${SERVICE_PORT:-9001}/healthz/live || exit 1
+
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["node", "dist/index.js"]

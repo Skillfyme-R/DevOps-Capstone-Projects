@@ -1,0 +1,45 @@
+{
+  "name": "medicore-platform",
+  "version": "1.0.0",
+  "description": "MediCore — Enterprise Healthcare Cloud Platform",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "services/*"
+  ],
+  "packageManager": "yarn@3.6.4",
+  "engines": {
+    "node": ">=18.12.0",
+    "yarn": ">=3.6.0"
+  },
+  "scripts": {
+    "start": "concurrently \"yarn workspace medicore-frontend start\" \"yarn workspace medicore-auth start:dev\" \"yarn workspace medicore-patients start:dev\" \"yarn workspace medicore-appointments start:dev\" \"yarn workspace medicore-clinical start:dev\" \"yarn workspace medicore-analytics start:dev\"",
+    "build": "yarn workspaces foreach --all run build",
+    "lint": "eslint '{frontend,services}/*/src/**/*.{ts,tsx}' --max-warnings 0",
+    "type-check": "yarn workspaces foreach --all run type-check",
+    "test": "yarn workspaces foreach --all run test",
+    "db:migrate": "yarn workspaces foreach --all run db:migrate",
+    "db:rollback": "yarn workspaces foreach --all run db:rollback",
+    "db:seed": "yarn workspaces foreach --all run db:seed",
+    "docker:up": "docker compose -f infrastructure/docker/docker-compose.yml up -d",
+    "docker:down": "docker compose -f infrastructure/docker/docker-compose.yml down",
+    "infra:up": "docker compose -f infrastructure/docker/docker-compose.infra.yml up -d",
+    "infra:down": "docker compose -f infrastructure/docker/docker-compose.infra.yml down",
+    "k8s:deploy:staging": "kubectl apply -k infrastructure/kubernetes/overlays/staging",
+    "k8s:deploy:prod": "kubectl apply -k infrastructure/kubernetes/overlays/production",
+    "helm:install": "helm upgrade --install medicore infrastructure/helm/medicore --namespace medicore --create-namespace",
+    "vault:setup": "bash scripts/vault-setup.sh"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^6.7.0",
+    "@typescript-eslint/parser": "^6.7.0",
+    "concurrently": "^8.2.0",
+    "eslint": "^8.50.0",
+    "eslint-plugin-react": "^7.33.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "typescript": "^5.2.2"
+  },
+  "resolutions": {
+    "typescript": "^5.2.2"
+  }
+}

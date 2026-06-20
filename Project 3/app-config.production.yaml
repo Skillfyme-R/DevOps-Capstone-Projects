@@ -1,0 +1,21 @@
+platform:
+  environment: production
+
+gateway:
+  cors:
+    allowedOrigins:
+      - https://app.medicore.health
+      - https://portal.medicore.health
+
+security:
+  hipaaCompliance: true
+  auditAllAccess: true
+  tlsMinVersion: "1.3"
+
+observability:
+  jaeger:
+    samplingRate: 0.05
+
+logging:
+  level: warn
+  format: json

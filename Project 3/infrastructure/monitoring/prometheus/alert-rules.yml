@@ -1,0 +1,115 @@
+groups:
+  - name: medicore.api
+    interval: 30s
+    rules:
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(medicore_auth_http_requests_total{status=~"5.."}[5m])) by (service)
+          /
+          sum(rate(medicore_auth_http_requests_total[5m])) by (service)
+          > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          platform: medicore
+        annotations:
+          summary: "High 5xx error rate on {{ $labels.service }}"
+          description: "Service {{ $labels.service }} has >5% error rate for 5 minutes. Current rate: {{ $value | humanizePercentage }}"
+          runbook: "https://docs.medicore.health/runbooks/high-error-rate"
+
+      - alert: SlowAPIResponse
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(medicore_auth_http_request_duration_seconds_bucket[5m])) by (le, service)
+          ) > 2
+        for: 5m
+        labels:
+          severity: warning
+          platform: medicore
+        annotations:
+          summary: "Slow API response on {{ $labels.service }}"
+          description: "P99 latency on {{ $labels.service }} exceeds 2 seconds for 5 minutes"
+
+      - alert: ServiceDown
+        expr: up{job=~"medicore-.*"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          platform: medicore
+        annotations:
+          summary: "MediCore service {{ $labels.job }} is down"
+          description: "Service {{ $labels.job }} has been unreachable for 1 minute"
+
+  - name: medicore.database
+    rules:
+      - alert: PostgresDown
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          platform: medicore
+        annotations:
+          summary: "PostgreSQL is unreachable"
+          description: "The MediCore database (PostgreSQL) has been unreachable for 1 minute. All clinical operations are at risk."
+
+      - alert: PostgresHighConnections
+        expr: |
+          sum(pg_stat_activity_count) / pg_settings_max_connections > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          platform: medicore
+        annotations:
+          summary: "PostgreSQL connection pool near capacity"
+          description: "PostgreSQL connection utilisation is above 80%. Current: {{ $value | humanizePercentage }}"
+
+  - name: medicore.cache
+    rules:
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          platform: medicore
+        annotations:
+          summary: "Redis cache is unreachable"
+          description: "Redis cache has been unreachable for 1 minute. Rate limiting and session management are degraded."
+
+      - alert: RedisHighMemory
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.90
+        for: 5m
+        labels:
+          severity: warning
+          platform: medicore
+        annotations:
+          summary: "Redis memory utilisation above 90%"
+          description: "Redis memory usage at {{ $value | humanizePercentage }}. Consider increasing capacity."
+
+  - name: medicore.business
+    rules:
+      - alert: NoAppointmentsBooked
+        expr: |
+          sum(increase(medicore_auth_http_requests_total{route="/api/v1/appointments", method="POST", status="201"}[1h])) == 0
+        for: 0m
+        labels:
+          severity: warning
+          platform: medicore
+          type: business
+        annotations:
+          summary: "No appointments booked in the last hour"
+          description: "Zero appointment bookings in the past 60 minutes. Possible checkout flow disruption or scheduled maintenance."
+
+      - alert: HighLoginFailureRate
+        expr: |
+          sum(rate(medicore_auth_http_requests_total{route="/api/v1/auth/login", status="401"}[5m]))
+          /
+          sum(rate(medicore_auth_http_requests_total{route="/api/v1/auth/login"}[5m]))
+          > 0.30
+        for: 3m
+        labels:
+          severity: warning
+          platform: medicore
+          type: security
+        annotations:
+          summary: "High login failure rate — possible brute force"
+          description: "More than 30% of login attempts are failing. Possible credential stuffing or brute-force attack."

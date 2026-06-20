@@ -1,0 +1,63 @@
+version: '3.9'
+
+name: medicore-infra
+
+networks:
+  medicore-net:
+    driver: bridge
+
+volumes:
+  mc_postgres_data:
+  mc_redis_data:
+  mc_minio_data:
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: mc_postgres
+    environment:
+      POSTGRES_USER: medicore
+      POSTGRES_PASSWORD: medicore_dev_password
+      POSTGRES_DB: medicore_dev
+    ports:
+      - "5434:5432"
+    volumes:
+      - mc_postgres_data:/var/lib/postgresql/data
+    networks:
+      - medicore-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medicore -d medicore_dev"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: mc_redis
+    command: redis-server --requirepass medicore_redis_pass --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6382:6379"
+    volumes:
+      - mc_redis_data:/data
+    networks:
+      - medicore-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "medicore_redis_pass", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: mc_minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - mc_minio_data:/data
+    networks:
+      - medicore-net

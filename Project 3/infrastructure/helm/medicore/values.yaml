@@ -1,0 +1,144 @@
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  storageClass: ""
+  namespace: medicore
+
+platform:
+  name: medicore
+  environment: production
+  logLevel: warn
+
+image:
+  registry: ghcr.io
+  repository: skillfyme-r/medicore
+  pullPolicy: IfNotPresent
+  tag: "1.0.0"
+
+services:
+  auth:
+    enabled: true
+    port: 9001
+    replicaCount: 3
+    resources:
+      requests: { cpu: 100m, memory: 256Mi }
+      limits: { cpu: 500m, memory: 512Mi }
+    autoscaling:
+      enabled: true
+      minReplicas: 3
+      maxReplicas: 20
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+
+  patients:
+    enabled: true
+    port: 9002
+    replicaCount: 3
+    resources:
+      requests: { cpu: 100m, memory: 256Mi }
+      limits: { cpu: 500m, memory: 512Mi }
+    autoscaling:
+      enabled: true
+      minReplicas: 3
+      maxReplicas: 20
+      targetCPUUtilizationPercentage: 70
+
+  appointments:
+    enabled: true
+    port: 9003
+    replicaCount: 2
+    resources:
+      requests: { cpu: 100m, memory: 256Mi }
+      limits: { cpu: 500m, memory: 512Mi }
+
+  analytics:
+    enabled: true
+    port: 9005
+    replicaCount: 2
+    resources:
+      requests: { cpu: 200m, memory: 512Mi }
+      limits: { cpu: 1000m, memory: 1Gi }
+
+  frontend:
+    enabled: true
+    replicaCount: 2
+    resources:
+      requests: { cpu: 50m, memory: 64Mi }
+      limits: { cpu: 200m, memory: 128Mi }
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  hosts:
+    - host: app.medicore.health
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: medicore-tls
+      hosts:
+        - app.medicore.health
+
+postgresql:
+  enabled: true
+  auth:
+    username: medicore
+    password: ""
+    database: medicore_prod
+    existingSecret: medicore-db-secret
+  primary:
+    persistence:
+      size: 50Gi
+      storageClass: gp3
+    resources:
+      requests: { cpu: 500m, memory: 1Gi }
+      limits: { cpu: 2000m, memory: 4Gi }
+
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    existingSecret: medicore-redis-secret
+  master:
+    persistence:
+      size: 8Gi
+    resources:
+      requests: { cpu: 100m, memory: 256Mi }
+      limits: { cpu: 500m, memory: 512Mi }
+  replica:
+    replicaCount: 2
+
+secrets:
+  existingSecret: medicore-secrets
+
+serviceAccount:
+  create: true
+  name: medicore-sa
+  annotations: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  fsGroup: 1001
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    namespace: monitoring
+    interval: 15s
+    path: /metrics
+
+vault:
+  enabled: false
+  role: medicore
+  secretPath: secret/medicore

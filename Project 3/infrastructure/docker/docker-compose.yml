@@ -1,0 +1,256 @@
+version: '3.9'
+
+name: medicore-platform
+
+networks:
+  medicore-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+volumes:
+  mc_postgres_data:
+  mc_redis_data:
+  mc_minio_data:
+  mc_prometheus_data:
+  mc_grafana_data:
+  mc_loki_data:
+
+services:
+  # ── Databases ──────────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: mc_postgres
+    environment:
+      POSTGRES_USER: medicore
+      POSTGRES_PASSWORD: medicore_dev_password
+      POSTGRES_DB: medicore_dev
+    ports:
+      - "5434:5432"
+    volumes:
+      - mc_postgres_data:/var/lib/postgresql/data
+    networks:
+      - medicore-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medicore -d medicore_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: mc_redis
+    command: redis-server --requirepass medicore_redis_pass --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6382:6379"
+    volumes:
+      - mc_redis_data:/data
+    networks:
+      - medicore-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "medicore_redis_pass", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Object Storage ─────────────────────────────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: mc_minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - mc_minio_data:/data
+    networks:
+      - medicore-net
+
+  # ── Backend Services ──────────────────────────────────────
+  medicore-auth:
+    build:
+      context: ../../
+      dockerfile: infrastructure/docker/Dockerfile.service
+      args:
+        SERVICE: auth
+    container_name: mc_auth_service
+    env_file: ../../.env
+    environment:
+      AUTH_SERVICE_PORT: 9001
+      MEDICORE_DB_HOST: postgres
+      MEDICORE_DB_PORT: 5432
+      MEDICORE_REDIS_URL: redis://:medicore_redis_pass@redis:6379
+    ports:
+      - "9001:9001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - medicore-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9001/healthz/live"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  medicore-patients:
+    build:
+      context: ../../
+      dockerfile: infrastructure/docker/Dockerfile.service
+      args:
+        SERVICE: patients
+    container_name: mc_patient_service
+    env_file: ../../.env
+    environment:
+      PATIENT_SERVICE_PORT: 9002
+      MEDICORE_DB_HOST: postgres
+      MEDICORE_DB_PORT: 5432
+      MEDICORE_REDIS_URL: redis://:medicore_redis_pass@redis:6379
+    ports:
+      - "9002:9002"
+    depends_on:
+      medicore-auth:
+        condition: service_healthy
+    networks:
+      - medicore-net
+    restart: unless-stopped
+
+  medicore-appointments:
+    build:
+      context: ../../
+      dockerfile: infrastructure/docker/Dockerfile.service
+      args:
+        SERVICE: appointments
+    container_name: mc_appointment_service
+    env_file: ../../.env
+    environment:
+      APPOINTMENT_SERVICE_PORT: 9003
+      MEDICORE_DB_HOST: postgres
+      MEDICORE_DB_PORT: 5432
+      MEDICORE_REDIS_URL: redis://:medicore_redis_pass@redis:6379
+    ports:
+      - "9003:9003"
+    depends_on:
+      medicore-auth:
+        condition: service_healthy
+    networks:
+      - medicore-net
+    restart: unless-stopped
+
+  medicore-analytics:
+    build:
+      context: ../../
+      dockerfile: infrastructure/docker/Dockerfile.service
+      args:
+        SERVICE: analytics
+    container_name: mc_analytics_service
+    env_file: ../../.env
+    environment:
+      ANALYTICS_SERVICE_PORT: 9005
+      MEDICORE_DB_HOST: postgres
+      MEDICORE_DB_PORT: 5432
+      MEDICORE_REDIS_URL: redis://:medicore_redis_pass@redis:6379
+    ports:
+      - "9005:9005"
+    depends_on:
+      medicore-auth:
+        condition: service_healthy
+    networks:
+      - medicore-net
+    restart: unless-stopped
+
+  # ── Frontend ──────────────────────────────────────────────
+  medicore-frontend:
+    build:
+      context: ../../
+      dockerfile: infrastructure/docker/Dockerfile.frontend
+    container_name: mc_frontend
+    ports:
+      - "3005:80"
+    depends_on:
+      - medicore-auth
+      - medicore-patients
+      - medicore-appointments
+      - medicore-analytics
+    networks:
+      - medicore-net
+    restart: unless-stopped
+
+  # ── Observability ─────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: mc_prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ../monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../monitoring/prometheus/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
+      - mc_prometheus_data:/prometheus
+    networks:
+      - medicore-net
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: mc_grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: medicore_grafana_admin
+      GF_SERVER_HTTP_PORT: "4001"
+    ports:
+      - "4001:4001"
+    volumes:
+      - mc_grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - medicore-net
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:latest
+    container_name: mc_loki
+    command: -config.file=/etc/loki/loki.yml
+    ports:
+      - "3100:3100"
+    volumes:
+      - ../monitoring/loki/loki.yml:/etc/loki/loki.yml:ro
+      - mc_loki_data:/loki
+    networks:
+      - medicore-net
+    restart: unless-stopped
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: mc_jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"
+      - "14268:14268"
+      - "4317:4317"
+    networks:
+      - medicore-net
+    restart: unless-stopped
+
+  adminer:
+    image: adminer:4
+    container_name: mc_adminer
+    ports:
+      - "8081:8080"
+    networks:
+      - medicore-net
+    profiles:
+      - dev

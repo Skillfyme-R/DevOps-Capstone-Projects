@@ -1,0 +1,28 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: medicore-platform
+  title: MediCore Healthcare Platform
+  description: Enterprise Healthcare Cloud Platform — HIPAA-compliant, FHIR R4-native, cloud-native microservices architecture
+  annotations:
+    github.com/project-slug: Skillfyme-R/DevOps-Capstone-Projects
+    prometheus.io/alert: medicore_*
+  tags:
+    - healthcare
+    - hipaa
+    - fhir
+    - kubernetes
+    - nodejs
+    - react
+  links:
+    - url: https://app.medicore.health
+      title: Production App
+      icon: web
+    - url: https://staging.medicore.health
+      title: Staging
+      icon: web
+spec:
+  type: service
+  lifecycle: production
+  owner: skillfyme-platform-team
+  system: medicore

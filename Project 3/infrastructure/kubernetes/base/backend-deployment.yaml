@@ -1,0 +1,165 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: medicore-auth
+  namespace: medicore
+  labels:
+    app: medicore-auth
+    component: backend
+    platform: medicore
+    tier: service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: medicore-auth
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: medicore-auth
+        version: "1.0.0"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9001"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: medicore-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: medicore-auth
+          image: medicore/auth-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 9001
+              protocol: TCP
+          env:
+            - name: AUTH_SERVICE_PORT
+              value: "9001"
+            - name: MEDICORE_ENVIRONMENT
+              value: production
+            - name: MEDICORE_DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: medicore-secrets
+                  key: db-host
+            - name: MEDICORE_DB_PORT
+              value: "5432"
+            - name: MEDICORE_DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: medicore-secrets
+                  key: db-user
+            - name: MEDICORE_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: medicore-secrets
+                  key: db-password
+            - name: MEDICORE_DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: medicore-secrets
+                  key: db-name
+            - name: MEDICORE_REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: medicore-secrets
+                  key: redis-url
+            - name: MEDICORE_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: medicore-secrets
+                  key: jwt-secret
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /healthz/live
+              port: 9001
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz/ready
+              port: 9001
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /healthz/live
+              port: 9001
+            failureThreshold: 30
+            periodSeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: medicore-auth
+  namespace: medicore
+  labels:
+    app: medicore-auth
+    platform: medicore
+spec:
+  selector:
+    app: medicore-auth
+  ports:
+    - name: http
+      port: 9001
+      targetPort: 9001
+      protocol: TCP
+  type: ClusterIP
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: medicore-auth-hpa
+  namespace: medicore
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: medicore-auth
+  minReplicas: 3
+  maxReplicas: 20
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80

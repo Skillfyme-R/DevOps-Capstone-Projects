@@ -1,0 +1,111 @@
+platform:
+  name: MediCore
+  version: 1.0.0
+  edition: enterprise
+  environment: ${MEDICORE_ENVIRONMENT}
+
+gateway:
+  port: ${GATEWAY_PORT}
+  host: ${GATEWAY_HOST}
+  cors:
+    allowedOrigins:
+      - ${CORS_ALLOWED_ORIGINS}
+    credentials: true
+
+services:
+  auth:
+    port: ${AUTH_SERVICE_PORT}
+    jwtExpiry: ${MEDICORE_JWT_EXPIRY}
+    refreshTokenExpiry: ${MEDICORE_REFRESH_TOKEN_EXPIRY}
+    bcryptRounds: ${MEDICORE_BCRYPT_ROUNDS}
+    mfa:
+      enabled: true
+      issuer: MediCore
+  patients:
+    port: ${PATIENT_SERVICE_PORT}
+    fhirCompliance: R4
+  appointments:
+    port: ${APPOINTMENT_SERVICE_PORT}
+    slotDurationMinutes: 30
+    reminderLeadTimeHours: 24
+  clinical:
+    port: ${CLINICAL_SERVICE_PORT}
+    encryptSensitiveFields: true
+  analytics:
+    port: ${ANALYTICS_SERVICE_PORT}
+    cacheTtlSeconds: 300
+  notifications:
+    port: ${NOTIFICATION_SERVICE_PORT}
+
+database:
+  host: ${MEDICORE_DB_HOST}
+  port: ${MEDICORE_DB_PORT}
+  user: ${MEDICORE_DB_USER}
+  password: ${MEDICORE_DB_PASSWORD}
+  name: ${MEDICORE_DB_NAME}
+  ssl: ${MEDICORE_DB_SSL}
+  pool:
+    min: ${MEDICORE_DB_POOL_MIN}
+    max: ${MEDICORE_DB_POOL_MAX}
+
+cache:
+  url: ${MEDICORE_REDIS_URL}
+  defaultTtl: ${MEDICORE_REDIS_TTL_DEFAULT}
+
+storage:
+  endpoint: ${MEDICORE_S3_ENDPOINT}
+  buckets:
+    documents: ${MEDICORE_S3_BUCKET_DOCUMENTS}
+    images: ${MEDICORE_S3_BUCKET_IMAGES}
+
+fhir:
+  version: ${FHIR_VERSION}
+  baseUrl: ${FHIR_BASE_URL}
+  resources:
+    - Patient
+    - Practitioner
+    - Encounter
+    - Observation
+    - DiagnosticReport
+    - Appointment
+    - MedicationRequest
+    - AllergyIntolerance
+    - Condition
+    - Procedure
+
+security:
+  hipaaCompliance: true
+  auditAllAccess: true
+  dataEncryption: AES-256-GCM
+  tlsMinVersion: "1.2"
+  passwordPolicy:
+    minLength: 12
+    requireUppercase: true
+    requireNumbers: true
+    requireSpecialChars: true
+    maxAgeDays: 90
+    historyCount: 12
+
+observability:
+  prometheus:
+    port: ${PROMETHEUS_PORT}
+    path: /metrics
+    scrapeInterval: 15s
+  jaeger:
+    endpoint: ${JAEGER_ENDPOINT}
+    serviceName: medicore
+    samplingRate: 0.1
+  loki:
+    endpoint: ${LOKI_ENDPOINT}
+    labels:
+      platform: medicore
+      version: 1.0.0
+
+logging:
+  level: ${MEDICORE_LOG_LEVEL}
+  format: ${MEDICORE_LOG_FORMAT}
+  redactFields:
+    - password
+    - ssn
+    - dob
+    - creditCard

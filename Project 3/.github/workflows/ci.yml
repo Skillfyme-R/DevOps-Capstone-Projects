@@ -1,0 +1,199 @@
+name: MediCore CI Pipeline
+
+on:
+  push:
+    branches: [main, develop, 'feature/**', 'hotfix/**']
+    paths:
+      - 'services/**'
+      - 'frontend/**'
+      - 'infrastructure/**'
+      - '.github/workflows/**'
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '18'
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository_owner }}/medicore
+
+jobs:
+  # ── Lint & Type Check ─────────────────────────────────────
+  lint-and-typecheck:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --no-immutable
+
+      - name: ESLint (zero warnings tolerance)
+        run: yarn lint
+
+      - name: TypeScript type-check — all services
+        run: yarn type-check
+
+  # ── Security Scan ─────────────────────────────────────────
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --no-immutable
+
+      - name: Yarn audit (moderate+)
+        run: yarn npm audit --severity moderate || true
+
+      - name: Trivy filesystem scan (CRITICAL only)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: CRITICAL
+          exit-code: '1'
+          ignore-unfixed: true
+
+  # ── Integration Tests ─────────────────────────────────────
+  test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck]
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: medicore
+          POSTGRES_PASSWORD: medicore_test_password
+          POSTGRES_DB: medicore_test
+        ports:
+          - 5434:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+        ports:
+          - 6382:6379
+
+    env:
+      MEDICORE_ENVIRONMENT: test
+      MEDICORE_DB_HOST: localhost
+      MEDICORE_DB_PORT: 5434
+      MEDICORE_DB_USER: medicore
+      MEDICORE_DB_PASSWORD: medicore_test_password
+      MEDICORE_DB_NAME: medicore_test
+      MEDICORE_REDIS_URL: redis://localhost:6382
+      MEDICORE_JWT_SECRET: test-jwt-secret-minimum-64-chars-for-test-environment-only
+      MEDICORE_BCRYPT_ROUNDS: 4
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --no-immutable
+
+      - name: Run database migrations
+        run: |
+          yarn workspace medicore-auth db:migrate
+          yarn workspace medicore-patients db:migrate
+          yarn workspace medicore-appointments db:migrate
+
+      - name: Run test suite
+        run: yarn test
+
+  # ── Docker Build Verification ──────────────────────────────
+  build-images:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck, test]
+    strategy:
+      matrix:
+        service: [auth, patients, appointments, analytics]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build ${{ matrix.service }} service image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infrastructure/docker/Dockerfile.service
+          build-args: |
+            SERVICE=${{ matrix.service }}
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ github.sha }}
+
+      - name: Build frontend image
+        if: matrix.service == 'auth'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infrastructure/docker/Dockerfile.frontend
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-frontend:${{ github.sha }}
+
+  # ── Helm Chart Lint ─────────────────────────────────────────
+  helm-lint:
+    name: Helm Chart Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: v3.13.0
+
+      - name: Lint Helm chart
+        run: helm lint infrastructure/helm/medicore --set global.namespace=medicore-test
+
+      - name: Helm template dry-run
+        run: helm template medicore infrastructure/helm/medicore --namespace medicore-test | kubectl apply --dry-run=client -f - || true
