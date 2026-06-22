@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { Box, Grid, Card, CardContent, Typography, Stack, Avatar, Chip, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, Alert, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem, IconButton, CircularProgress } from '@mui/material';
+import { Box, Grid, Card, CardContent, Typography, Stack, Avatar, Chip, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, Alert, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem, IconButton, CircularProgress, Tooltip } from '@mui/material';
 import PeopleIcon from '@mui/icons-material/People';
 import StorageIcon from '@mui/icons-material/Storage';
 import SecurityIcon from '@mui/icons-material/Security';
 import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
 import CloseIcon from '@mui/icons-material/Close';
+import DeleteIcon from '@mui/icons-material/Delete';
+import { useAuthContext } from '../App';
 import { useQuery, useQueryClient } from 'react-query';
 import { apiClient } from '../utils/apiClient';
 import { MC_COLORS } from '../styles/theme';
@@ -31,6 +33,7 @@ const EMPTY_INVITE = { email: '', firstName: '', lastName: '', role: 'clinician'
 
 export default function AdminPage() {
   const queryClient = useQueryClient();
+  const { user: me } = useAuthContext();
   const { data: users, isLoading, isError } = useQuery(
     'admin-users',
     () => apiClient.get('/auth/users').then((r: { data: any }) => r.data),
@@ -42,6 +45,11 @@ export default function AdminPage() {
   const [inviteSaving, setInviteSaving] = useState(false);
   const [inviteError, setInviteError] = useState('');
   const [inviteResult, setInviteResult] = useState<{ email: string; temporaryPassword: string } | null>(null);
+
+  // Delete user
+  const [deleteTarget, setDeleteTarget] = useState<Record<string, string> | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   function updateInvite(key: string) {
     return (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -69,6 +77,22 @@ export default function AdminPage() {
     setInviteForm(EMPTY_INVITE);
     setInviteError('');
     setInviteResult(null);
+  }
+
+  async function handleDeleteConfirm() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    setDeleteError('');
+    try {
+      await apiClient.delete(`/auth/users/${deleteTarget.id}`);
+      queryClient.invalidateQueries('admin-users');
+      setDeleteTarget(null);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message || 'Failed to delete user';
+      setDeleteError(msg);
+    } finally {
+      setDeleting(false);
+    }
   }
 
   return (
@@ -121,29 +145,45 @@ export default function AdminPage() {
                         <TableCell>Role</TableCell>
                         <TableCell>Status</TableCell>
                         <TableCell>Last Login</TableCell>
+                        <TableCell align="center">Action</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {isLoading
-                        ? Array.from({ length: 4 }).map((_, i) => <TableRow key={i}><TableCell colSpan={4}><Box sx={{ height: 36 }} /></TableCell></TableRow>)
-                        : (users?.users || []).map((u: Record<string, string>) => (
-                          <TableRow key={u.id} hover>
-                            <TableCell>
-                              <Stack direction="row" alignItems="center" spacing={1.5}>
-                                <Avatar sx={{ width: 28, height: 28, bgcolor: MC_COLORS.teal[500], fontSize: '0.7rem' }}>
-                                  {(u.first_name?.[0] || '') + (u.last_name?.[0] || '')}
-                                </Avatar>
-                                <Box>
-                                  <Typography variant="caption" fontWeight={600} display="block">{u.first_name} {u.last_name}</Typography>
-                                  <Typography variant="caption" color="text.secondary">{u.email}</Typography>
-                                </Box>
-                              </Stack>
-                            </TableCell>
-                            <TableCell><Chip label={u.role} size="small" sx={{ bgcolor: `${ROLE_COLOR[u.role] || '#666'}20`, color: ROLE_COLOR[u.role] || '#666', fontSize: '0.65rem', height: 18 }} /></TableCell>
-                            <TableCell><Chip label={u.status} size="small" color={u.status === 'active' ? 'success' : 'default'} sx={{ fontSize: '0.65rem', height: 18 }} /></TableCell>
-                            <TableCell><Typography variant="caption" color="text.secondary">{u.last_login_at ? new Date(u.last_login_at).toLocaleDateString() : 'Never'}</Typography></TableCell>
-                          </TableRow>
-                        ))}
+                        ? Array.from({ length: 4 }).map((_, i) => <TableRow key={i}><TableCell colSpan={5}><Box sx={{ height: 36 }} /></TableCell></TableRow>)
+                        : (users?.users || []).map((u: Record<string, string>) => {
+                          const isSelf = u.id === me?.id;
+                          const isSuperAdmin = u.role === 'superadmin';
+                          const canDelete = !isSelf && !isSuperAdmin;
+                          return (
+                            <TableRow key={u.id} hover>
+                              <TableCell>
+                                <Stack direction="row" alignItems="center" spacing={1.5}>
+                                  <Avatar sx={{ width: 28, height: 28, bgcolor: MC_COLORS.teal[500], fontSize: '0.7rem' }}>
+                                    {(u.first_name?.[0] || '') + (u.last_name?.[0] || '')}
+                                  </Avatar>
+                                  <Box>
+                                    <Typography variant="caption" fontWeight={600} display="block">{u.first_name} {u.last_name}</Typography>
+                                    <Typography variant="caption" color="text.secondary">{u.email}</Typography>
+                                  </Box>
+                                </Stack>
+                              </TableCell>
+                              <TableCell><Chip label={u.role} size="small" sx={{ bgcolor: `${ROLE_COLOR[u.role] || '#666'}20`, color: ROLE_COLOR[u.role] || '#666', fontSize: '0.65rem', height: 18 }} /></TableCell>
+                              <TableCell><Chip label={u.status} size="small" color={u.status === 'active' ? 'success' : 'default'} sx={{ fontSize: '0.65rem', height: 18 }} /></TableCell>
+                              <TableCell><Typography variant="caption" color="text.secondary">{u.last_login_at ? new Date(u.last_login_at).toLocaleDateString() : 'Never'}</Typography></TableCell>
+                              <TableCell align="center">
+                                <Tooltip title={isSelf ? 'Cannot delete yourself' : isSuperAdmin ? 'Cannot delete superadmin' : 'Delete user'}>
+                                  <span>
+                                    <IconButton size="small" disabled={!canDelete} onClick={() => { setDeleteTarget(u); setDeleteError(''); }}
+                                      sx={{ color: canDelete ? 'error.main' : 'text.disabled' }}>
+                                      <DeleteIcon fontSize="small" />
+                                    </IconButton>
+                                  </span>
+                                </Tooltip>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
                     </TableBody>
                   </Table>
                 </TableContainer>
@@ -171,6 +211,29 @@ export default function AdminPage() {
           </Card>
         </Grid>
       </Grid>
+
+      {/* Delete User Confirmation */}
+      <Dialog open={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)} maxWidth="xs" fullWidth>
+        <DialogTitle>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Typography variant="h6" fontWeight={700}>Delete User</Typography>
+            <IconButton size="small" onClick={() => setDeleteTarget(null)}><CloseIcon fontSize="small" /></IconButton>
+          </Stack>
+        </DialogTitle>
+        <DialogContent dividers>
+          {deleteError && <Alert severity="error" sx={{ mb: 2 }}>{deleteError}</Alert>}
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            This will permanently delete <strong>{deleteTarget?.first_name} {deleteTarget?.last_name}</strong> ({deleteTarget?.email}). This cannot be undone.
+          </Alert>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setDeleteTarget(null)} disabled={deleting}>Cancel</Button>
+          <Button variant="contained" color="error" disabled={deleting} onClick={handleDeleteConfirm}
+            startIcon={deleting ? <CircularProgress size={16} color="inherit" /> : <DeleteIcon />}>
+            {deleting ? 'Deleting...' : 'Delete User'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Invite User Dialog */}
       <Dialog open={inviteOpen} onClose={handleInviteClose} maxWidth="xs" fullWidth>

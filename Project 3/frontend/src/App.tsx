@@ -15,10 +15,11 @@ const ClinicalPage = lazy(() => import('./pages/ClinicalPage'));
 const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
+const MedicalKnowledgePage = lazy(() => import('./pages/MedicalKnowledgePage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
-interface AuthContextValue { user: AuthUser | null; loading: boolean; initialized: boolean; logout: () => Promise<void>; login: (email: string, password: string) => Promise<unknown>; }
-export const AuthContext = createContext<AuthContextValue>({ user: null, loading: false, initialized: false, logout: async () => {}, login: async () => {} });
+interface AuthContextValue { user: AuthUser | null; loading: boolean; initialized: boolean; logout: () => Promise<void>; login: (email: string, password: string) => Promise<unknown>; refreshUser: () => Promise<void>; }
+export const AuthContext = createContext<AuthContextValue>({ user: null, loading: false, initialized: false, logout: async () => {}, login: async () => {}, refreshUser: async () => {} });
 export const useAuthContext = () => useContext(AuthContext);
 
 function Loader() {
@@ -59,6 +60,8 @@ export default function App() {
               <Route path="/patients/:id" element={<ProtectedRoute roles={['clinician', 'nurse', 'admin', 'superadmin']}><PatientDetailPage /></ProtectedRoute>} />
               <Route path="/appointments" element={<ProtectedRoute><AppointmentsPage /></ProtectedRoute>} />
               <Route path="/clinical" element={<ProtectedRoute roles={['clinician', 'nurse', 'admin', 'superadmin']}><ClinicalPage /></ProtectedRoute>} />
+              <Route path="/clinical/knowledge" element={<ProtectedRoute roles={['clinician', 'nurse', 'admin', 'superadmin']}><MedicalKnowledgePage /></ProtectedRoute>} />
+              <Route path="/clinical/:module" element={<ProtectedRoute roles={['clinician', 'nurse', 'admin', 'superadmin']}><ClinicalPage /></ProtectedRoute>} />
               <Route path="/analytics" element={<ProtectedRoute roles={['admin', 'superadmin', 'clinician']}><AnalyticsPage /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
               <Route path="/admin" element={<ProtectedRoute roles={['admin', 'superadmin']}><AdminPage /></ProtectedRoute>} />

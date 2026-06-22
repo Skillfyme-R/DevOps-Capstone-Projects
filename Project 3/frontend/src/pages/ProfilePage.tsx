@@ -18,7 +18,7 @@ const ROLE_COLOR: Record<string, string> = {
 };
 
 export default function ProfilePage() {
-  const { user } = useAuthContext();
+  const { user, refreshUser } = useAuthContext();
   const [editing, setEditing] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState('');
@@ -57,17 +57,17 @@ export default function ProfilePage() {
   if (!user) return null;
 
   const completeness = [
-    { label: 'Basic Info', done: true },
-    { label: 'Contact Details', done: !!user.email },
-    { label: 'Professional Info', done: ['clinician', 'nurse'].includes(user.role) },
-    { label: 'MFA Enabled', done: user.mfaEnabled },
+    { label: 'Basic Info', done: !!(user.firstName && user.lastName) },
+    { label: 'Contact Details', done: !!user.phone },
+    { label: 'Professional Info', done: ['admin', 'superadmin'].includes(user.role) || ['clinician', 'nurse'].includes(user.role) },
+    { label: 'MFA Enabled', done: mfaEnabled },
   ];
   const pct = Math.round((completeness.filter((c) => c.done).length / completeness.length) * 100);
 
   function startEditing() {
     setFirstName(user?.firstName || '');
     setLastName(user?.lastName || '');
-    setPhone('');
+    setPhone(user?.phone || '');
     setEditing(true);
     setSaved(false);
     setSaveError('');
@@ -77,7 +77,9 @@ export default function ProfilePage() {
     setSaving(true);
     setSaveError('');
     try {
-      await apiClient.patch('/auth/profile', { firstName, lastName, phone: phone || undefined });
+      const phoneVal = phone ? (phone.startsWith('+') ? phone : `+91${phone}`) : undefined;
+      await apiClient.patch('/auth/profile', { firstName, lastName, phone: phoneVal });
+      await refreshUser();
       setSaved(true);
       setEditing(false);
     } catch (err: unknown) {
@@ -180,8 +182,8 @@ export default function ProfilePage() {
                     <TextField label="Email" defaultValue={user.email} disabled fullWidth type="email" helperText="Email cannot be changed" />
                   </Grid>
                   <Grid item xs={6}>
-                    <TextField label="Phone" placeholder="+1 (555) 000-0000"
-                      value={editing ? phone : ''}
+                    <TextField label="Phone" placeholder="+91 9876543210"
+                      value={editing ? phone : (user.phone || '')}
                       onChange={(e) => setPhone(e.target.value)}
                       disabled={!editing} fullWidth />
                   </Grid>

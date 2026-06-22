@@ -8,6 +8,7 @@ export interface AuthUser {
   lastName: string;
   role: 'patient' | 'clinician' | 'nurse' | 'admin' | 'superadmin';
   mfaEnabled: boolean;
+  phone?: string;
 }
 
 interface AuthState { user: AuthUser | null; loading: boolean; initialized: boolean; }
@@ -46,5 +47,7 @@ export function useAuth() {
     setState({ user: null, loading: false, initialized: true });
   }, []);
 
-  return { ...state, login, logout };
+  const refreshUser = useCallback(async () => { await fetchMe(); }, [fetchMe]);
+
+  return { ...state, login, logout, refreshUser };
 }

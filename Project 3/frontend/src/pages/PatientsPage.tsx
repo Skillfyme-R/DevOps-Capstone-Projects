@@ -1,23 +1,32 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Card, CardContent, Typography, Button, TextField, InputAdornment, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Avatar, IconButton, Stack, Skeleton, Pagination, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, Grid, MenuItem, Alert, CircularProgress } from '@mui/material';
+import { Box, Card, CardContent, Typography, Button, TextField, InputAdornment, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Avatar, IconButton, Stack, Skeleton, Pagination, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, Grid, MenuItem, Alert, CircularProgress, Divider } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import DeleteIcon from '@mui/icons-material/Delete';
 import PersonIcon from '@mui/icons-material/Person';
 import CloseIcon from '@mui/icons-material/Close';
 import { useQuery, useQueryClient } from 'react-query';
 import { differenceInYears, parseISO } from 'date-fns';
 import { patientsClient } from '../utils/apiClient';
 import { MC_COLORS } from '../styles/theme';
+import { useAuthContext } from '../App';
 
 const GENDER_COLOR: Record<string, string> = { male: MC_COLORS.teal[500], female: MC_COLORS.emerald[500], other: MC_COLORS.status.info };
 
-const EMPTY_FORM = { firstName: '', lastName: '', email: '', phone: '', dateOfBirth: '', gender: 'male', bloodGroup: '', address: '' };
+const EMPTY_FORM = {
+  firstName: '', lastName: '', email: '', phone: '', dateOfBirth: '',
+  gender: 'male', bloodGroup: '', maritalStatus: '',
+  addressLine1: '', city: '', state: '', postalCode: '',
+  emergencyName: '', emergencyRelation: '', emergencyPhone: '',
+};
 
 export default function PatientsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuthContext();
+  const canDelete = ['admin', 'superadmin'].includes(user?.role || '');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [open, setOpen] = useState(false);
@@ -25,6 +34,9 @@ export default function PatientsPage() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
   const [formSuccess, setFormSuccess] = useState('');
+  const [deletePatient, setDeletePatient] = useState<Record<string, string> | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
   const LIMIT = 15;
 
   const { data, isLoading } = useQuery(
@@ -46,21 +58,35 @@ export default function PatientsPage() {
     setSaving(true);
     setFormError('');
     try {
+      const hasAddress = form.addressLine1 || form.city || form.state || form.postalCode;
+      const hasEmergency = form.emergencyName && form.emergencyPhone;
       await patientsClient.post('/patients', {
         firstName: form.firstName,
         lastName: form.lastName,
         email: form.email || undefined,
-        phone: form.phone ? form.phone.replace(/\s+/g, '') : undefined,
+        phone: form.phone ? (form.phone.startsWith('+') ? form.phone.replace(/\s+/g, '') : `+91${form.phone.replace(/\s+/g, '')}`) : undefined,
         dateOfBirth: form.dateOfBirth || undefined,
         gender: form.gender,
         bloodGroup: form.bloodGroup || undefined,
-        address: form.address ? { line1: form.address, city: 'N/A', state: 'N/A', postalCode: '00000' } : undefined,
+        maritalStatus: form.maritalStatus || undefined,
+        address: hasAddress ? {
+          line1: form.addressLine1 || '',
+          city: form.city || 'N/A',
+          state: form.state || 'N/A',
+          postalCode: form.postalCode || '000000',
+        } : undefined,
+        emergencyContact: hasEmergency ? {
+          name: form.emergencyName,
+          relationship: form.emergencyRelation || 'Family',
+          phone: form.emergencyPhone.startsWith('+') ? form.emergencyPhone : `+91${form.emergencyPhone}`,
+        } : undefined,
       });
       setFormSuccess('Patient registered successfully!');
       queryClient.invalidateQueries('patients');
       setTimeout(() => { setOpen(false); setForm(EMPTY_FORM); setFormSuccess(''); }, 1500);
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message || 'Failed to register patient';
+      const e = err as any;
+      const msg = e?.response?.data?.error?.message || e?.response?.data?.message || e?.message || 'Failed to register patient';
       setFormError(msg);
     } finally {
       setSaving(false);
@@ -68,6 +94,21 @@ export default function PatientsPage() {
   }
 
   function handleClose() { setOpen(false); setForm(EMPTY_FORM); setFormError(''); setFormSuccess(''); }
+
+  async function handleDelete() {
+    if (!deletePatient) return;
+    setDeleting(true);
+    setDeleteError('');
+    try {
+      await patientsClient.delete(`/patients/${deletePatient.id}`);
+      queryClient.invalidateQueries('patients');
+      setDeletePatient(null);
+    } catch (err: unknown) {
+      setDeleteError((err as any)?.response?.data?.error?.message || 'Failed to delete patient');
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   return (
     <Box>
@@ -137,7 +178,7 @@ export default function PatientsPage() {
                           <TableCell><Typography variant="body2" fontFamily="monospace">{p.mrn}</Typography></TableCell>
                           <TableCell>
                             <Stack spacing={0.5}>
-                              <Typography variant="body2">{age !== null ? `${age} yrs` : '—'}</Typography>
+                              <Typography variant="body2">{age !== null && age > 0 ? `${age} yrs` : '—'}</Typography>
                               <Chip label={p.gender} size="small" sx={{ height: 18, fontSize: '0.65rem', bgcolor: `${GENDER_COLOR[p.gender] || MC_COLORS.clinical.textGray}20`, color: GENDER_COLOR[p.gender] || MC_COLORS.clinical.textGray, width: 'fit-content' }} />
                             </Stack>
                           </TableCell>
@@ -145,7 +186,12 @@ export default function PatientsPage() {
                           <TableCell><Typography variant="body2">{p.phone || '—'}</Typography></TableCell>
                           <TableCell><Typography variant="body2" color="text.secondary">{p.created_at ? new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(p.created_at)) : '—'}</Typography></TableCell>
                           <TableCell align="right" onClick={(e) => e.stopPropagation()}>
-                            <Tooltip title="View Patient"><IconButton size="small" onClick={() => navigate(`/patients/${p.id}`)} sx={{ color: 'primary.main' }}><VisibilityIcon fontSize="small" /></IconButton></Tooltip>
+                            <Stack direction="row" justifyContent="flex-end" spacing={0.5}>
+                              <Tooltip title="View Patient"><IconButton size="small" onClick={() => navigate(`/patients/${p.id}`)} sx={{ color: 'primary.main' }}><VisibilityIcon fontSize="small" /></IconButton></Tooltip>
+                              {canDelete && (
+                                <Tooltip title="Delete Patient"><IconButton size="small" onClick={() => { setDeletePatient(p); setDeleteError(''); }} sx={{ color: 'error.main' }}><DeleteIcon fontSize="small" /></IconButton></Tooltip>
+                              )}
+                            </Stack>
                           </TableCell>
                         </TableRow>
                       );
@@ -175,25 +221,54 @@ export default function PatientsPage() {
             {formError && <Alert severity="error" sx={{ mb: 2 }}>{formError}</Alert>}
             {formSuccess && <Alert severity="success" sx={{ mb: 2 }}>{formSuccess}</Alert>}
             <Grid container spacing={2}>
-              <Grid item xs={6}><TextField label="First Name" value={form.firstName} onChange={update('firstName')} fullWidth required autoFocus /></Grid>
-              <Grid item xs={6}><TextField label="Last Name" value={form.lastName} onChange={update('lastName')} fullWidth required /></Grid>
-              <Grid item xs={12}><TextField label="Email" type="email" value={form.email} onChange={update('email')} fullWidth /></Grid>
-              <Grid item xs={6}><TextField label="Phone" value={form.phone} onChange={update('phone')} fullWidth placeholder="+1 555 000 0000" /></Grid>
-              <Grid item xs={6}><TextField label="Date of Birth" type="date" value={form.dateOfBirth} onChange={update('dateOfBirth')} fullWidth InputLabelProps={{ shrink: true }} /></Grid>
+
+              {/* Basic Info */}
+              <Grid item xs={12}><Divider><Typography variant="caption" fontWeight={700} color="text.secondary">BASIC INFORMATION</Typography></Divider></Grid>
+              <Grid item xs={6}><TextField label="First Name *" value={form.firstName} onChange={update('firstName')} fullWidth required autoFocus /></Grid>
+              <Grid item xs={6}><TextField label="Last Name *" value={form.lastName} onChange={update('lastName')} fullWidth required /></Grid>
+              <Grid item xs={12}><TextField label="Email Address" type="email" value={form.email} onChange={update('email')} fullWidth placeholder="patient@example.com" /></Grid>
+              <Grid item xs={6}><TextField label="Phone Number" value={form.phone} onChange={update('phone')} fullWidth placeholder="9876543210 (auto +91)" /></Grid>
               <Grid item xs={6}>
-                <TextField select label="Gender" value={form.gender} onChange={update('gender')} fullWidth>
+                <TextField label="Date of Birth" type="date" value={form.dateOfBirth} onChange={update('dateOfBirth')} fullWidth InputLabelProps={{ shrink: true }}
+                  inputProps={{ max: new Date(new Date().setDate(new Date().getDate() - 1)).toISOString().slice(0, 10) }}
+                  helperText={form.dateOfBirth && differenceInYears(new Date(), parseISO(form.dateOfBirth)) > 0 ? `Age: ${differenceInYears(new Date(), parseISO(form.dateOfBirth))} years` : 'Cannot be today or future date'} />
+              </Grid>
+              <Grid item xs={4}>
+                <TextField select label="Gender *" value={form.gender} onChange={update('gender')} fullWidth>
                   <MenuItem value="male">Male</MenuItem>
                   <MenuItem value="female">Female</MenuItem>
                   <MenuItem value="other">Other</MenuItem>
                 </TextField>
               </Grid>
-              <Grid item xs={6}>
+              <Grid item xs={4}>
                 <TextField select label="Blood Group" value={form.bloodGroup} onChange={update('bloodGroup')} fullWidth>
-                  <MenuItem value="">Unknown</MenuItem>
+                  <MenuItem value="">Not Known</MenuItem>
                   {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((bg) => <MenuItem key={bg} value={bg}>{bg}</MenuItem>)}
                 </TextField>
               </Grid>
-              <Grid item xs={12}><TextField label="Address" value={form.address} onChange={update('address')} fullWidth multiline rows={2} /></Grid>
+              <Grid item xs={4}>
+                <TextField select label="Marital Status" value={form.maritalStatus} onChange={update('maritalStatus')} fullWidth>
+                  <MenuItem value="">Not Specified</MenuItem>
+                  <MenuItem value="single">Single</MenuItem>
+                  <MenuItem value="married">Married</MenuItem>
+                  <MenuItem value="divorced">Divorced</MenuItem>
+                  <MenuItem value="widowed">Widowed</MenuItem>
+                </TextField>
+              </Grid>
+
+              {/* Address */}
+              <Grid item xs={12}><Divider><Typography variant="caption" fontWeight={700} color="text.secondary">ADDRESS</Typography></Divider></Grid>
+              <Grid item xs={12}><TextField label="House / Flat / Street" value={form.addressLine1} onChange={update('addressLine1')} fullWidth placeholder="e.g. 42, MG Road, Koramangala" /></Grid>
+              <Grid item xs={5}><TextField label="City" value={form.city} onChange={update('city')} fullWidth placeholder="e.g. Bengaluru" /></Grid>
+              <Grid item xs={4}><TextField label="State" value={form.state} onChange={update('state')} fullWidth placeholder="e.g. Karnataka" /></Grid>
+              <Grid item xs={3}><TextField label="PIN Code" value={form.postalCode} onChange={update('postalCode')} fullWidth placeholder="560001" /></Grid>
+
+              {/* Emergency Contact */}
+              <Grid item xs={12}><Divider><Typography variant="caption" fontWeight={700} color="text.secondary">EMERGENCY CONTACT</Typography></Divider></Grid>
+              <Grid item xs={5}><TextField label="Contact Name" value={form.emergencyName} onChange={update('emergencyName')} fullWidth placeholder="e.g. Priya Sharma" /></Grid>
+              <Grid item xs={3}><TextField label="Relation" value={form.emergencyRelation} onChange={update('emergencyRelation')} fullWidth placeholder="e.g. Spouse" /></Grid>
+              <Grid item xs={4}><TextField label="Emergency Phone" value={form.emergencyPhone} onChange={update('emergencyPhone')} fullWidth placeholder="9876543210" /></Grid>
+
             </Grid>
           </DialogContent>
           <DialogActions sx={{ p: 2 }}>
@@ -203,6 +278,32 @@ export default function PatientsPage() {
             </Button>
           </DialogActions>
         </form>
+      </Dialog>
+
+      {/* Delete Confirm Dialog */}
+      <Dialog open={Boolean(deletePatient)} onClose={() => setDeletePatient(null)} maxWidth="xs" fullWidth>
+        <DialogTitle>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Typography variant="h6" fontWeight={700} color="error.main">Delete Patient</Typography>
+            <IconButton size="small" onClick={() => setDeletePatient(null)}><CloseIcon fontSize="small" /></IconButton>
+          </Stack>
+        </DialogTitle>
+        <DialogContent dividers>
+          {deleteError && <Alert severity="error" sx={{ mb: 2 }}>{deleteError}</Alert>}
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            This will permanently delete the patient record. This action cannot be undone.
+          </Alert>
+          <Typography variant="body2">
+            Are you sure you want to delete <strong>{deletePatient?.first_name} {deletePatient?.last_name}</strong> (MRN: <span style={{ fontFamily: 'monospace' }}>{deletePatient?.mrn}</span>)?
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setDeletePatient(null)} disabled={deleting}>Cancel</Button>
+          <Button variant="contained" color="error" onClick={handleDelete} disabled={deleting}
+            startIcon={deleting ? <CircularProgress size={16} color="inherit" /> : <DeleteIcon />}>
+            {deleting ? 'Deleting...' : 'Yes, Delete'}
+          </Button>
+        </DialogActions>
       </Dialog>
     </Box>
   );

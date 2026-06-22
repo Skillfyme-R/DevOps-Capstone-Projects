@@ -8,25 +8,18 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { useNavigate } from 'react-router-dom';
-import { analyticsClient } from '../utils/apiClient';
+import { analyticsClient, patientsClient, appointmentsClient } from '../utils/apiClient';
 import { useAuthContext } from '../App';
 import { MC_COLORS } from '../styles/theme';
 
-const DEMO_TREND = [
-  { date: 'Jun 14', total: 24, completed: 20 },
-  { date: 'Jun 15', total: 31, completed: 28 },
-  { date: 'Jun 16', total: 18, completed: 15 },
-  { date: 'Jun 17', total: 27, completed: 22 },
-  { date: 'Jun 18', total: 35, completed: 30 },
-  { date: 'Jun 19', total: 29, completed: 25 },
-  { date: 'Jun 20', total: 22, completed: 18 },
-];
-
-const DEMO_DEMOGRAPHICS = [
-  { name: 'Male', value: 45, color: MC_COLORS.teal[500] },
-  { name: 'Female', value: 48, color: MC_COLORS.emerald[500] },
-  { name: 'Other', value: 7, color: MC_COLORS.status.info },
-];
+// Build last 7 days date labels
+function last7Days() {
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    return d.toISOString().slice(0, 10);
+  });
+}
 
 const QUICK_ACTIONS = [
   { label: 'New Patient', path: '/patients', icon: PeopleIcon, color: MC_COLORS.teal[500] },
@@ -59,13 +52,83 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const isAdmin = ['admin', 'superadmin', 'clinician'].includes(user?.role || '');
 
-  const { data: summary, isLoading } = useQuery(
-    'analytics-summary',
-    () => analyticsClient.get('/analytics/summary').then((r: { data: any }) => r.data),
+  // Real data from actual services
+  const { data: patientsData, isLoading: pLoading } = useQuery(
+    'dashboard-patients',
+    () => patientsClient.get('/patients', { params: { limit: 1 } }).then((r: { data: any }) => r.data),
     { enabled: isAdmin, retry: false }
   );
 
-  const stats = summary || { totalPatients: 1284, todayAppointments: 22, weeklyAppointments: 147, completedAppointments: 89 };
+  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+  const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - 7);
+
+  const { data: todayAppts, isLoading: tLoading } = useQuery(
+    'dashboard-today',
+    () => appointmentsClient.get('/appointments', { params: { from: todayStart.toISOString(), limit: 1 } }).then((r: { data: any }) => r.data),
+    { enabled: isAdmin, retry: false }
+  );
+
+  const { data: weekAppts, isLoading: wLoading } = useQuery(
+    'dashboard-week',
+    () => appointmentsClient.get('/appointments', { params: { from: weekStart.toISOString(), limit: 1 } }).then((r: { data: any }) => r.data),
+    { enabled: isAdmin, retry: false }
+  );
+
+  const { data: completedAppts, isLoading: cLoading } = useQuery(
+    'dashboard-completed',
+    () => appointmentsClient.get('/appointments', { params: { status: 'completed', limit: 1 } }).then((r: { data: any }) => r.data),
+    { enabled: isAdmin, retry: false }
+  );
+
+  // Trend: fetch last 7 days appointments for chart
+  const { data: allAppts } = useQuery(
+    'dashboard-trend',
+    () => appointmentsClient.get('/appointments', { params: { from: weekStart.toISOString(), limit: 200 } }).then((r: { data: any }) => r.data),
+    { enabled: isAdmin, retry: false }
+  );
+
+  const isLoading = pLoading || tLoading || wLoading || cLoading;
+
+  const stats = {
+    totalPatients: patientsData?.total ?? 0,
+    todayAppointments: todayAppts?.total ?? 0,
+    weeklyAppointments: weekAppts?.total ?? 0,
+    completedAppointments: completedAppts?.total ?? 0,
+  };
+
+  // Build trend data from real appointments
+  const trendData = last7Days().map((date) => {
+    const appts = (allAppts?.appointments || []).filter((a: any) => a.scheduled_at?.startsWith(date));
+    return {
+      date: new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short' }).format(new Date(date)),
+      scheduled: appts.filter((a: any) => !['completed', 'cancelled', 'no_show'].includes(a.status)).length,
+      completed: appts.filter((a: any) => a.status === 'completed').length,
+    };
+  });
+
+  const { data: demographicsData } = useQuery(
+    'analytics-demographics',
+    () => analyticsClient.get('/analytics/patients/demographics').then((r: { data: any }) => r.data),
+    { enabled: isAdmin, retry: false }
+  );
+
+  const GENDER_COLORS: Record<string, string> = {
+    male: MC_COLORS.teal[500],
+    female: MC_COLORS.emerald[500],
+    other: MC_COLORS.status.info,
+  };
+
+  const demographics = demographicsData?.genderBreakdown?.length
+    ? demographicsData.genderBreakdown.map((g: { gender: string; count: string }) => ({
+        name: g.gender.charAt(0).toUpperCase() + g.gender.slice(1),
+        value: Number(g.count),
+        color: GENDER_COLORS[g.gender] || MC_COLORS.status.pending,
+      }))
+    : [
+        { name: 'Male', value: 0, color: MC_COLORS.teal[500] },
+        { name: 'Female', value: 0, color: MC_COLORS.emerald[500] },
+        { name: 'Other', value: 0, color: MC_COLORS.status.info },
+      ];
 
   return (
     <Box>
@@ -123,13 +186,13 @@ export default function DashboardPage() {
                   <Button size="small" endIcon={<ArrowForwardIcon />} onClick={() => navigate('/analytics')}>Full Report</Button>
                 </Stack>
                 <ResponsiveContainer width="100%" height={240}>
-                  <LineChart data={DEMO_TREND}>
+                  <LineChart data={trendData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                    <YAxis tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
                     <Tooltip />
                     <Legend />
-                    <Line type="monotone" dataKey="total" stroke={MC_COLORS.teal[500]} strokeWidth={2.5} dot={{ r: 4 }} name="Scheduled" />
+                    <Line type="monotone" dataKey="scheduled" stroke={MC_COLORS.teal[500]} strokeWidth={2.5} dot={{ r: 4 }} name="Scheduled" />
                     <Line type="monotone" dataKey="completed" stroke={MC_COLORS.emerald[500]} strokeWidth={2.5} dot={{ r: 4 }} name="Completed" />
                   </LineChart>
                 </ResponsiveContainer>
@@ -144,8 +207,8 @@ export default function DashboardPage() {
                 <Typography variant="body2" color="text.secondary" mb={2}>Gender distribution</Typography>
                 <ResponsiveContainer width="100%" height={200}>
                   <PieChart>
-                    <Pie data={DEMO_DEMOGRAPHICS} cx="50%" cy="50%" innerRadius={55} outerRadius={80} paddingAngle={3} dataKey="value">
-                      {DEMO_DEMOGRAPHICS.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                    <Pie data={demographics} cx="50%" cy="50%" innerRadius={55} outerRadius={80} paddingAngle={3} dataKey="value">
+                      {demographics.map((entry: any, i: number) => <Cell key={i} fill={entry.color} />)}
                     </Pie>
                     <Legend iconType="circle" iconSize={10} />
                     <Tooltip formatter={(v) => [`${v}%`, '']} />
@@ -153,7 +216,7 @@ export default function DashboardPage() {
                 </ResponsiveContainer>
                 <Divider sx={{ my: 2 }} />
                 <Stack spacing={1}>
-                  {DEMO_DEMOGRAPHICS.map((d) => (
+                  {demographics.map((d: any) => (
                     <Stack key={d.name} direction="row" justifyContent="space-between" alignItems="center">
                       <Stack direction="row" alignItems="center" gap={1}>
                         <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: d.color }} />

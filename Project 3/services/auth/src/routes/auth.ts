@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { RateLimiterRedis } from 'rate-limiter-flexible';
 import { getDb } from '../services/database';
 import { getCache, CACHE_KEYS, CACHE_TTL } from '../services/cache';
-import { ValidationError, UnauthorizedError, ConflictError, RateLimitError, NotFoundError } from '../middleware/errorHandler';
+import { ValidationError, UnauthorizedError, ConflictError, RateLimitError, NotFoundError, ForbiddenError } from '../middleware/errorHandler';
 import { authenticate, requireRole } from '../middleware/authMiddleware';
 import { logger } from '../utils/logger';
 
@@ -62,6 +62,25 @@ router.post('/register', async (req: Request, res: Response) => {
     created_at: new Date(),
     updated_at: new Date(),
   });
+
+  // Auto-create mc_patients record for patient registrations
+  if (value.role === 'patient') {
+    const mrn = 'MRN-' + Date.now().toString(36).toUpperCase();
+    await db('mc_patients').insert({
+      id: uuidv4(),
+      mrn,
+      first_name: value.firstName,
+      last_name: value.lastName,
+      date_of_birth: value.dateOfBirth || '1990-01-01',
+      gender: 'other',
+      email: value.email,
+      phone: value.phone || null,
+      user_id: userId,
+      facility_id: value.facilityId || '00000000-0000-0000-0000-000000000001',
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+  }
 
   await db('mc_audit_logs').insert({
     id: uuidv4(),
@@ -221,6 +240,17 @@ router.get('/users', authenticate, requireRole('admin', 'superadmin'), async (_r
   const db = getDb();
   const users = await db('mc_users').select('id', 'email', 'first_name', 'last_name', 'role', 'status', 'facility_id', 'last_login_at', 'created_at').orderBy('created_at', 'desc');
   res.json({ users, total: users.length });
+});
+
+router.delete('/users/:id', authenticate, requireRole('admin', 'superadmin'), async (req: Request, res: Response) => {
+  const db = getDb();
+  const target = await db('mc_users').where({ id: req.params.id }).first();
+  if (!target) throw new NotFoundError('User');
+  if (target.role === 'superadmin') throw new ForbiddenError('Cannot delete a superadmin account');
+  if (target.id === req.user!.sub) throw new ForbiddenError('Cannot delete your own account');
+  await db('mc_users').where({ id: req.params.id }).delete();
+  logger.info('User deleted', { deletedBy: req.user!.sub, deletedUserId: req.params.id, email: target.email });
+  res.json({ message: 'User deleted successfully' });
 });
 
 router.patch('/profile', authenticate, async (req: Request, res: Response) => {
