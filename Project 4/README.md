@@ -939,7 +939,7 @@ Multiple Docker Compose projects were simultaneously occupying standard ports (5
 
 ## 17. License
 
-**Learnsyte Learning Private Limited (Skillfyme)**
+Learnsyte Learning Private Limited **(Skillfyme)**
 
 ---
 
