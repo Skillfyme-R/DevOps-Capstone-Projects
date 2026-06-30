@@ -939,11 +939,7 @@ Multiple Docker Compose projects were simultaneously occupying standard ports (5
 
 ## 17. License
 
-This project is developed and owned by **Learnsyte Learning Private Limited (Skillfyme)**.
-
-All rights reserved. Unauthorised reproduction, distribution, or commercial use of this project or any of its components is strictly prohibited without explicit written permission from Learnsyte Learning Private Limited.
-
-This project is intended for educational and portfolio demonstration purposes under the Skillfyme DevOps programme.
+**Learnsyte Learning Private Limited (Skillfyme)**
 
 ---
 
