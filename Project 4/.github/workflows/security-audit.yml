@@ -1,0 +1,59 @@
+name: ShieldGrid Security Audit
+
+on:
+  schedule:
+    - cron: "0 2 * * 1"  # Every Monday at 02:00 UTC
+  workflow_dispatch:
+
+jobs:
+  dependency-audit:
+    name: Dependency Vulnerability Audit
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Python dependency audit
+        working-directory: backend
+        run: |
+          pip install pip-audit poetry
+          poetry export -f requirements.txt --without dev --without-hashes | pip-audit -r /dev/stdin --format json -o /tmp/pip-audit.json || true
+          cat /tmp/pip-audit.json
+
+      - name: Node dependency audit
+        working-directory: frontend
+        run: |
+          npm ci
+          npm audit --json > /tmp/npm-audit.json || true
+          cat /tmp/npm-audit.json
+
+      - name: IaC security scan
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: infrastructure/terraform
+          framework: terraform
+          output_format: sarif
+          output_file_path: checkov-iac.sarif
+
+      - name: Upload IaC scan results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: checkov-iac.sarif
+
+  license-check:
+    name: License Compliance Check
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check Python licenses
+        working-directory: backend
+        run: |
+          pip install poetry pip-licenses
+          poetry install
+          pip-licenses --format=markdown --with-urls --order=license
+
+      - name: Check Node licenses
+        working-directory: frontend
+        run: |
+          npm ci
+          npx license-checker --summary --excludePrivatePackages

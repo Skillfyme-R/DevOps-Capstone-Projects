@@ -1,0 +1,15 @@
+# Local VS Code development overrides — applied automatically by Docker Compose
+# No AWS/cloud accounts needed. Disables services that require external dependencies.
+name: shieldgrid
+
+services:
+  # Override API to use hot-reload (Uvicorn --reload watches ./backend/app)
+  api:
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    environment:
+      RELOAD: "true"
+
+  # Disable Celery worker locally — it references app.worker which is not needed
+  # for the core API/dashboard flow
+  worker:
+    profiles: ["disabled"]

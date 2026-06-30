@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: shieldgrid-api-config
+  namespace: shieldgrid
+data:
+  APP_NAME: "ShieldGrid API"
+  ENVIRONMENT: "production"
+  DEBUG: "false"
+  LOG_LEVEL: "INFO"
+  PORT: "8000"
+  WORKERS: "4"
+  ALGORITHM: "HS256"
+  ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+  REFRESH_TOKEN_EXPIRE_DAYS: "7"
+  SCAN_CONCURRENCY_LIMIT: "10"
+  SCAN_TIMEOUT_SECONDS: "300"
+  DEPENDENCY_CHECK_ENABLED: "true"
+  SAST_ENABLED: "true"
+  DAST_ENABLED: "true"
+  CONTAINER_SCAN_ENABLED: "true"
+  SECRET_DETECTION_ENABLED: "true"
+  IAC_SCAN_ENABLED: "true"
+  PROMETHEUS_ENABLED: "true"
+  AWS_REGION: "us-east-1"
+  S3_REPORTS_BUCKET: "shieldgrid-prod-reports"
+  S3_ASSETS_BUCKET: "shieldgrid-prod-assets"

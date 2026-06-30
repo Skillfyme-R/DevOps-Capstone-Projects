@@ -1,0 +1,61 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: shieldgrid-api-policy
+  namespace: shieldgrid
+spec:
+  podSelector:
+    matchLabels:
+      app: shieldgrid-api
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: shieldgrid-dashboard
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - port: 8000
+  egress:
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - port: 5432  # PostgreSQL
+        - port: 6379  # Redis
+    - to:
+        - namespaceSelector: {}
+          podSelector: {}
+      ports:
+        - port: 443
+        - port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: shieldgrid-dashboard-policy
+  namespace: shieldgrid
+spec:
+  podSelector:
+    matchLabels:
+      app: shieldgrid-dashboard
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - port: 80
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: shieldgrid-api
+      ports:
+        - port: 8000

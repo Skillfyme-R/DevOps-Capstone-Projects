@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 222 47% 6%;
+    --foreground: 210 40% 98%;
+    --card: 222 47% 9%;
+    --card-foreground: 210 40% 98%;
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --primary: 221 100% 55%;
+    --primary-foreground: 210 40% 98%;
+    --muted: 217 33% 14%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 40% 98%;
+    --ring: 221 100% 55%;
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+}
+
+@layer components {
+  .severity-critical { @apply text-red-400 bg-red-950/40 border-red-800/50; }
+  .severity-high     { @apply text-orange-400 bg-orange-950/40 border-orange-800/50; }
+  .severity-medium   { @apply text-amber-400 bg-amber-950/40 border-amber-800/50; }
+  .severity-low      { @apply text-lime-400 bg-lime-950/40 border-lime-800/50; }
+  .severity-info     { @apply text-cyan-400 bg-cyan-950/40 border-cyan-800/50; }
+}

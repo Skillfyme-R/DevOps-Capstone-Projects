@@ -1,0 +1,43 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namePrefix: ""
+namespace: shieldgrid
+
+bases:
+  - ../../base
+
+images:
+  - name: SHIELDGRID_API_IMAGE
+    newName: 123456789012.dkr.ecr.us-east-1.amazonaws.com/shieldgrid-api
+    newTag: DEPLOY_TAG  # replaced by CI/CD
+  - name: SHIELDGRID_DASHBOARD_IMAGE
+    newName: 123456789012.dkr.ecr.us-east-1.amazonaws.com/shieldgrid-dashboard
+    newTag: DEPLOY_TAG
+
+patches:
+  - path: api-deployment-patch.yaml
+    target:
+      kind: Deployment
+      name: shieldgrid-api
+
+  - path: api-hpa-patch.yaml
+    target:
+      kind: HorizontalPodAutoscaler
+      name: shieldgrid-api
+
+replicas:
+  - name: shieldgrid-api
+    count: 4
+
+configMapGenerator:
+  - name: shieldgrid-api-config
+    behavior: merge
+    literals:
+      - ENVIRONMENT=production
+      - LOG_LEVEL=INFO
+
+secretGenerator:
+  - name: shieldgrid-api-secret
+    envs:
+      - api-secret.env  # not committed — injected by CI/CD from AWS Secrets Manager
