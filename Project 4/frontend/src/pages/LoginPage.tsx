@@ -165,7 +165,7 @@ export default function LoginPage() {
         </div>
 
         <p className="mt-6 text-center text-[11px] text-slate-700">
-          © {new Date().getFullYear()} ShieldGrid, Inc. · All rights reserved
+          © Learnsyte Learning Private Limited (Skillfyme)
         </p>
       </div>
     </div>
