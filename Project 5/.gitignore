@@ -1,0 +1,40 @@
+# Elixir / Mix
+/_build/
+/deps/
+*.ez
+erl_crash.dump
+*.beam
+
+# Secrets & environment
+.env
+.env.*
+!.env.example
+config/prod.secret.exs
+config/dev.secret.exs
+
+# Node / Frontend
+www/node_modules/
+www/.yarn/cache/
+www/dist/
+www/build/
+www/stats.html
+www/.env
+www/.env.*
+!www/.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Test artifacts
+/cover/
+/tmp/
+
+# Releases
+/rel/

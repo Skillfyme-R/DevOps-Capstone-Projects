@@ -1,0 +1,150 @@
+## FluxStream Helm Values
+## https://fluxstream.io/docs/deployment
+
+replicaCount: 2
+
+image:
+  repository: ghcr.io/fluxstream/fluxstream
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: "fluxstream"
+
+# ── Service Ports ────────────────────────────────────────────
+service:
+  type: ClusterIP
+  apiPort: 4000
+  graphqlPort: 4001
+  rtcPort: 4002
+  webPort: 80
+
+# ── Ingress ──────────────────────────────────────────────────
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+  hosts:
+    - host: app.fluxstream.io
+      paths:
+        - path: /graphql
+          pathType: Prefix
+          servicePort: 4001
+        - path: /api
+          pathType: Prefix
+          servicePort: 4000
+        - path: /socket
+          pathType: Prefix
+          servicePort: 4002
+        - path: /
+          pathType: Prefix
+          servicePort: 80
+  tls:
+    - secretName: fluxstream-tls
+      hosts:
+        - app.fluxstream.io
+
+# ── Environment variables ────────────────────────────────────
+env:
+  MIX_ENV: prod
+  HOST: app.fluxstream.io
+  DB_POOL_SIZE: "20"
+  CDN_HOST: https://cdn.fluxstream.io
+  STORAGE_REGION: us-east-1
+
+# ── Secret references ────────────────────────────────────────
+secrets:
+  existingSecret: fluxstream-secrets
+  secretKeyBase: SECRET_KEY_BASE
+  jwtSecret: JWT_SECRET
+  dbPassword: DB_PASS
+  stripeSecretKey: STRIPE_SECRET_KEY
+  stripeWebhookSecret: STRIPE_WEBHOOK_SECRET
+  sendgridApiKey: SENDGRID_API_KEY
+
+# ── Resource limits ──────────────────────────────────────────
+resources:
+  api:
+    requests: { cpu: "500m", memory: "512Mi" }
+    limits: { cpu: "2", memory: "2Gi" }
+  worker:
+    requests: { cpu: "250m", memory: "256Mi" }
+    limits: { cpu: "1", memory: "1Gi" }
+  web:
+    requests: { cpu: "50m", memory: "64Mi" }
+    limits: { cpu: "250m", memory: "256Mi" }
+
+# ── Autoscaling ──────────────────────────────────────────────
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# ── Pod Disruption Budget ────────────────────────────────────
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# ── Health checks ────────────────────────────────────────────
+livenessProbe:
+  httpGet: { path: /health, port: 4000 }
+  initialDelaySeconds: 60
+  periodSeconds: 30
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet: { path: /health, port: 4000 }
+  initialDelaySeconds: 20
+  periodSeconds: 10
+  failureThreshold: 3
+
+# ── PostgreSQL (via Bitnami) ─────────────────────────────────
+postgresql:
+  enabled: true
+  auth:
+    database: fluxstream
+    username: fluxstream
+    existingSecret: fluxstream-db-secret
+  primary:
+    resources:
+      requests: { cpu: "500m", memory: "1Gi" }
+      limits: { cpu: "2", memory: "4Gi" }
+  persistence:
+    enabled: true
+    size: 100Gi
+    storageClass: gp3
+
+# ── Redis (via Bitnami) ──────────────────────────────────────
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    existingSecret: fluxstream-redis-secret
+  master:
+    resources:
+      requests: { cpu: "100m", memory: "128Mi" }
+      limits: { cpu: "500m", memory: "512Mi" }
+
+# ── RabbitMQ (via Bitnami) ───────────────────────────────────
+rabbitmq:
+  enabled: true
+  auth:
+    username: fluxstream
+    existingPasswordSecret: fluxstream-rabbitmq-secret
+  resources:
+    requests: { cpu: "250m", memory: "512Mi" }
+    limits: { cpu: "1", memory: "2Gi" }
+
+# ── InfluxDB ─────────────────────────────────────────────────
+influxdb:
+  enabled: true
+  image: influxdb:2.7-alpine
+  persistence:
+    size: 50Gi

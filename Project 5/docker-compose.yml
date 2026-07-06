@@ -1,0 +1,172 @@
+services:
+  # ── PostgreSQL — Main database ──────────────────────────────
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    ports:
+      - "5434:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: fluxstream_dev
+    command: postgres -c wal_level=logical -c max_connections=200
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── PostgreSQL — CDN metadata database ──────────────────────
+  cdn_db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    ports:
+      - "5436:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: fluxstream_cdn_dev
+    volumes:
+      - cdn_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── RabbitMQ — Message broker for transcoding queue ─────────
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    restart: unless-stopped
+    hostname: fluxstream-rabbit
+    environment:
+      RABBITMQ_DEFAULT_USER: fluxstream
+      RABBITMQ_DEFAULT_PASS: fluxstream_dev
+      RABBITMQ_DEFAULT_VHOST: fluxstream
+      RABBITMQ_ERLANG_COOKIE: FLUXSTREAM_ERLANG_COOKIE
+    ports:
+      - "5673:5672"
+      - "15673:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  # ── InfluxDB — Streaming analytics / metrics ─────────────────
+  influxdb:
+    image: influxdb:2.7-alpine
+    restart: unless-stopped
+    ports:
+      - "8087:8086"
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: fluxstream
+      DOCKER_INFLUXDB_INIT_PASSWORD: fluxstream_dev
+      DOCKER_INFLUXDB_INIT_ORG: fluxstream
+      DOCKER_INFLUXDB_INIT_BUCKET: fluxstream_metrics
+    volumes:
+      - influx_data:/var/lib/influxdb2
+
+  # ── Redis — Session cache / APQ cache ────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6382:6379"
+    command: redis-server --requirepass fluxstream_dev --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      retries: 5
+
+  # ── MinIO — S3-compatible object storage (dev only) ──────────
+  minio:
+    image: quay.io/minio/minio:latest
+    restart: unless-stopped
+    ports:
+      - "9010:9000"
+      - "9011:9001"
+    environment:
+      MINIO_ROOT_USER: fluxstream
+      MINIO_ROOT_PASSWORD: fluxstream_dev_secret
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── FluxStream API ────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "4030:4000"
+      - "4031:4001"
+      - "4032:4002"
+    environment:
+      MIX_ENV: prod
+      SECRET_KEY_BASE: dev-secret-key-base-please-change-in-production
+      JWT_SECRET: dev-jwt-secret-please-change
+      HOST: localhost
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASS: postgres
+      DB_NAME: fluxstream_dev
+      CDN_DB_HOST: cdn_db
+      CDN_DB_PORT: 5432
+      CDN_DB_NAME: fluxstream_cdn_dev
+      RABBITMQ_URL: amqp://fluxstream:fluxstream_dev@rabbitmq:5672/fluxstream
+      REDIS_URL: redis://:fluxstream_dev@redis:6379
+      STORAGE_BUCKET: fluxstream-dev
+      STORAGE_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: fluxstream
+      AWS_SECRET_ACCESS_KEY: fluxstream_dev_secret
+      S3_ENDPOINT: http://minio:9000
+      CDN_HOST: http://localhost:9000/fluxstream-dev
+      INFLUX_HOST: http://influxdb:8086
+      INFLUX_TOKEN: fluxstream_dev
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-sk_test_placeholder}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-whsec_test_placeholder}
+    depends_on:
+      db: { condition: service_healthy }
+      cdn_db: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+
+  # ── Frontend (Nginx serving built React SPA) ──────────────────
+  web:
+    build:
+      context: .
+      dockerfile: dockerfiles/Dockerfile.web
+    restart: unless-stopped
+    ports:
+      - "3010:80"
+    depends_on:
+      - api
+
+volumes:
+  db_data:
+  cdn_db_data:
+  rabbitmq_data:
+  influx_data:
+  redis_data:
+  minio_data:

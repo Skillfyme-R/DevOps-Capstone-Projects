@@ -1,0 +1,597 @@
+"""
+FluxStream GraphQL API — Enterprise OTT Streaming Platform
+Version: 1.0
+"""
+
+# ──────────────────────────────────────────────
+# Scalars
+# ──────────────────────────────────────────────
+
+scalar DateTime
+scalar Upload
+scalar Map
+
+# ──────────────────────────────────────────────
+# Enums
+# ──────────────────────────────────────────────
+
+enum ContentType {
+  MOVIE
+  SERIES
+  DOCUMENTARY
+  LIVE_EVENT
+  SHORT
+  PODCAST
+}
+
+enum ContentStatus {
+  DRAFT
+  PROCESSING
+  READY
+  PUBLISHED
+  ARCHIVED
+}
+
+enum AgeRating {
+  G
+  PG
+  PG13
+  R
+  NC17
+  TV_MA
+  TV_14
+  TV_PG
+}
+
+enum StreamProtocol {
+  HLS
+  DASH
+  RTMP
+  WEBRTC
+}
+
+enum StreamQuality {
+  AUTO
+  SD_360P
+  SD_480P
+  HD_720P
+  HD_1080P
+  UHD_4K
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  UNPAID
+  PAUSED
+}
+
+enum BillingInterval {
+  MONTHLY
+  ANNUAL
+  LIFETIME
+}
+
+enum IssueType {
+  BUFFERING
+  NO_AUDIO
+  POOR_QUALITY
+  PLAYBACK_ERROR
+  SUBTITLES
+  LOGIN
+  BILLING
+  OTHER
+}
+
+enum IssueStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum IssuePriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum UserRole {
+  VIEWER
+  CREATOR
+  STUDIO_ADMIN
+  PLATFORM_ADMIN
+}
+
+enum StudioStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
+enum CDNNodeStatus {
+  PROVISIONING
+  HEALTHY
+  DEGRADED
+  DRAINING
+  OFFLINE
+}
+
+enum CloudProvider {
+  AWS
+  GCP
+  AZURE
+  CLOUDFLARE
+  AKAMAI
+  FASTLY
+  SELF_HOSTED
+}
+
+enum JobStatus {
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+  RETRYING
+  CANCELED
+}
+
+# ──────────────────────────────────────────────
+# Core Types
+# ──────────────────────────────────────────────
+
+type User {
+  id: ID!
+  name: String!
+  email: String!
+  emailVerified: Boolean!
+  role: UserRole!
+  avatarUrl: String
+  phone: String
+  language: String
+  timezone: String
+  account: Account
+  subscriptions: [Subscription!]!
+  viewingProfiles: [ViewingProfile!]!
+  persistedTokens: [PersistedToken!]!
+  insertedAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type Account {
+  id: ID!
+  name: String!
+  slug: String!
+  tier: String!
+  logoUrl: String
+  domain: String
+  billingEmail: String
+  suspended: Boolean!
+  whiteLabel: Boolean!
+  maxViewers: Int!
+  maxStreams: Int!
+  storageQuotaGb: Int!
+  users: [User!]!
+  studios: [Studio!]!
+  subscriptions: [Subscription!]!
+  domainMappings: [DomainMapping!]!
+  insertedAt: DateTime!
+}
+
+type Studio {
+  id: ID!
+  name: String!
+  slug: String!
+  description: String
+  logoUrl: String
+  bannerUrl: String
+  website: String
+  status: StudioStatus!
+  verified: Boolean!
+  revenueShare: Float!
+  contentCount: Int!
+  totalViews: Int!
+  payoutEnabled: Boolean!
+  genres: [String!]!
+  country: String
+  owner: User!
+  members: [StudioMember!]!
+  contents: [Content!]!
+  insertedAt: DateTime!
+}
+
+type StudioMember {
+  id: ID!
+  role: String!
+  studio: Studio!
+  user: User!
+}
+
+type Content {
+  id: ID!
+  title: String!
+  slug: String!
+  description: String
+  shortDescription: String
+  contentType: ContentType!
+  status: ContentStatus!
+  ageRating: AgeRating!
+  durationSeconds: Int
+  releaseYear: Int
+  language: String!
+  subtitles: [String!]!
+  genres: [String!]!
+  tags: [String!]!
+  thumbnailUrl: String
+  bannerUrl: String
+  trailerUrl: String
+  featured: Boolean!
+  viewCount: Int!
+  avgRating: Float
+  seasonCount: Int!
+  episodeCount: Int!
+  masterPlaylistUrl: String
+  publishedAt: DateTime
+  studio: Studio!
+  episodes: [Episode!]!
+  streamEndpoints: [StreamEndpoint!]!
+  insertedAt: DateTime!
+}
+
+type Episode {
+  id: ID!
+  title: String!
+  description: String
+  seasonNumber: Int!
+  episodeNumber: Int!
+  durationSeconds: Int
+  status: ContentStatus!
+  thumbnailUrl: String
+  masterPlaylistUrl: String
+  subtitles: [String!]!
+  viewCount: Int!
+  publishedAt: DateTime
+  content: Content!
+  streamEndpoints: [StreamEndpoint!]!
+}
+
+type StreamEndpoint {
+  id: ID!
+  url: String!
+  protocol: StreamProtocol!
+  quality: StreamQuality!
+  status: String!
+  region: String
+  latencyMs: Int
+  bitrate: Int
+  isPrimary: Boolean!
+  drmEnabled: Boolean!
+  cdnNode: CDNNode
+}
+
+type CDNNode {
+  id: ID!
+  name: String!
+  region: String!
+  country: String
+  city: String
+  provider: CloudProvider!
+  status: CDNNodeStatus!
+  popCode: String
+  capacityGbps: Float
+  currentLoadPct: Float!
+  activeStreams: Int!
+  lastHealthCheck: DateTime
+}
+
+type Plan {
+  id: ID!
+  name: String!
+  slug: String!
+  description: String
+  monthlyPriceCents: Int!
+  annualPriceCents: Int
+  currency: String!
+  maxStreams: Int!
+  maxProfiles: Int!
+  maxQuality: String!
+  offlineDownloads: Boolean!
+  hdrEnabled: Boolean!
+  dolbyAtmos: Boolean!
+  adsSupported: Boolean!
+  familySharing: Boolean!
+  trialDays: Int!
+  features: [String!]!
+  active: Boolean!
+}
+
+type Subscription {
+  id: ID!
+  status: SubscriptionStatus!
+  billingInterval: BillingInterval!
+  currentPeriodStart: DateTime
+  currentPeriodEnd: DateTime
+  trialEnd: DateTime
+  cancelAtPeriodEnd: Boolean!
+  canceledAt: DateTime
+  plan: Plan!
+  user: User!
+}
+
+type ViewingProfile {
+  id: ID!
+  name: String!
+  avatarUrl: String
+  avatarColor: String
+  profileType: String!
+  language: String!
+  autoplayNext: Boolean!
+  subtitlesOn: Boolean!
+  defaultQuality: String!
+  genresPreferred: [String!]!
+}
+
+type ViewingHistory {
+  id: ID!
+  watchedSeconds: Int!
+  completed: Boolean!
+  lastPosition: Int!
+  deviceType: String
+  qualityWatched: String
+  startedAt: DateTime
+  completedAt: DateTime
+  content: Content!
+  episode: Episode
+}
+
+type Watchlist {
+  id: ID!
+  content: Content!
+  insertedAt: DateTime!
+}
+
+type PlaybackIssue {
+  id: ID!
+  title: String!
+  description: String!
+  issueType: IssueType!
+  status: IssueStatus!
+  priority: IssuePriority!
+  errorCode: String
+  resolvedAt: DateTime
+  resolutionNote: String
+  reporter: User!
+  assignee: User
+  content: Content
+  messages: [PlaybackIssueMessage!]!
+  insertedAt: DateTime!
+}
+
+type PlaybackIssueMessage {
+  id: ID!
+  text: String!
+  internal: Boolean!
+  author: User!
+  insertedAt: DateTime!
+}
+
+type TranscodingJob {
+  id: ID!
+  status: JobStatus!
+  progressPct: Float!
+  errorMessage: String
+  retryCount: Int!
+  workerID: String
+  startedAt: DateTime
+  completedAt: DateTime
+  content: Content
+  episode: Episode
+  insertedAt: DateTime!
+}
+
+type PersistedToken {
+  id: ID!
+  name: String
+  scopes: [String!]!
+  lastUsedAt: DateTime
+  expiresAt: DateTime
+  revoked: Boolean!
+  insertedAt: DateTime!
+}
+
+type DomainMapping {
+  id: ID!
+  domain: String!
+  status: String!
+  verificationKey: String!
+  sslEnabled: Boolean!
+  verifiedAt: DateTime
+}
+
+type Webhook {
+  id: ID!
+  url: String!
+  events: [String!]!
+  active: Boolean!
+  description: String
+}
+
+type PlatformCapacity {
+  totalCapacityGbps: Float
+  avgLoadPct: Float
+  totalActiveStreams: Int
+  nodeCount: Int
+}
+
+type AuthPayload {
+  token: String!
+  user: User!
+}
+
+type TokenPayload {
+  token: String!
+  tokenRecord: PersistedToken!
+}
+
+# ──────────────────────────────────────────────
+# Queries
+# ──────────────────────────────────────────────
+
+type Query {
+  # Auth / Me
+  me: User
+
+  # Content Catalog
+  content(id: ID, slug: String): Content
+  contents(
+    genre: String
+    contentType: ContentType
+    status: ContentStatus
+    featured: Boolean
+    studioId: ID
+    orderBy: String
+    limit: Int
+  ): [Content!]!
+  searchContent(query: String!, genre: String, contentType: ContentType, limit: Int): [Content!]!
+  featuredContent(limit: Int): [Content!]!
+  episode(id: ID!): Episode
+
+  # Studios
+  studio(id: ID, slug: String): Studio
+  studios(status: StudioStatus, verified: Boolean, limit: Int): [Studio!]!
+
+  # Accounts
+  account(id: ID, slug: String): Account
+  accounts(tier: String, suspended: Boolean): [Account!]!
+
+  # Plans & Subscriptions
+  plans(active: Boolean, public: Boolean): [Plan!]!
+  plan(id: ID, slug: String): Plan
+  mySubscription: Subscription
+
+  # Viewing
+  myWatchlist(profileId: ID): [Watchlist!]!
+  myViewingHistory(profileId: ID, limit: Int): [ViewingHistory!]!
+  viewingProfiles: [ViewingProfile!]!
+
+  # Support
+  playbackIssue(id: ID!): PlaybackIssue
+  playbackIssues(status: IssueStatus, priority: IssuePriority, limit: Int): [PlaybackIssue!]!
+  myPlaybackIssues: [PlaybackIssue!]!
+
+  # CDN
+  cdnNodes(status: CDNNodeStatus, region: String): [CDNNode!]!
+  cdnNode(id: ID!): CDNNode
+  platformCapacity: PlatformCapacity
+
+  # Transcoding
+  transcodingJob(id: ID!): TranscodingJob
+  transcodingJobs(status: JobStatus, contentId: ID, limit: Int): [TranscodingJob!]!
+
+  # Tokens
+  myApiTokens: [PersistedToken!]!
+
+  # Webhooks
+  webhooks(studioId: ID): [Webhook!]!
+}
+
+# ──────────────────────────────────────────────
+# Mutations
+# ──────────────────────────────────────────────
+
+type Mutation {
+  # Auth
+  register(name: String!, email: String!, password: String!): AuthPayload
+  login(email: String!, password: String!): AuthPayload
+  logout: Boolean
+
+  # Users
+  updateProfile(name: String, avatarUrl: String, phone: String, language: String, timezone: String): User
+  changePassword(oldPassword: String!, newPassword: String!): User
+  createApiToken(name: String, scopes: [String!]): TokenPayload
+  revokeApiToken(id: ID!): PersistedToken
+  createViewingProfile(name: String!, profileType: String, language: String): ViewingProfile
+  updateViewingProfile(id: ID!, name: String, language: String, autoplayNext: Boolean, subtitlesOn: Boolean, defaultQuality: String): ViewingProfile
+  deleteViewingProfile(id: ID!): ViewingProfile
+
+  # Studios
+  createStudio(name: String!, description: String, website: String, genres: [String!]): Studio
+  updateStudio(id: ID!, name: String, description: String, logoUrl: String, bannerUrl: String, website: String): Studio
+  addStudioMember(studioId: ID!, userId: ID!, role: String!): StudioMember
+  removeStudioMember(studioId: ID!, userId: ID!): StudioMember
+  approveStudio(id: ID!): Studio
+  suspendStudio(id: ID!): Studio
+
+  # Content
+  createContent(
+    studioId: ID!
+    title: String!
+    description: String
+    contentType: ContentType!
+    ageRating: AgeRating
+    genres: [String!]
+    language: String
+    releaseYear: Int
+  ): Content
+  updateContent(id: ID!, title: String, description: String, thumbnailUrl: String, bannerUrl: String, trailerUrl: String, featured: Boolean): Content
+  publishContent(id: ID!): Content
+  deleteContent(id: ID!): Content
+  addEpisode(contentId: ID!, title: String!, seasonNumber: Int!, episodeNumber: Int!, description: String): Episode
+  uploadContentFile(contentId: ID!, file: Upload!): TranscodingJob
+  uploadEpisodeFile(episodeId: ID!, file: Upload!): TranscodingJob
+
+  # Watchlist
+  addToWatchlist(contentId: ID!, profileId: ID): Watchlist
+  removeFromWatchlist(contentId: ID!): Watchlist
+  recordView(contentId: ID!, episodeId: ID, watchedSeconds: Int!, lastPosition: Int!, completed: Boolean, sessionId: String): ViewingHistory
+
+  # Subscriptions / Billing
+  createSubscription(planId: ID!, billingInterval: BillingInterval!): Subscription
+  cancelSubscription(id: ID!, immediately: Boolean): Subscription
+  changePlan(subscriptionId: ID!, newPlanId: ID!): Subscription
+
+  # Support
+  reportPlaybackIssue(title: String!, description: String!, issueType: IssueType!, contentId: ID, episodeId: ID, errorCode: String, deviceInfo: Map): PlaybackIssue
+  addIssueMessage(issueId: ID!, text: String!, internal: Boolean): PlaybackIssueMessage
+  assignIssue(id: ID!, assigneeId: ID!): PlaybackIssue
+  resolveIssue(id: ID!, resolutionNote: String!): PlaybackIssue
+  closeIssue(id: ID!): PlaybackIssue
+  setIssuePriority(id: ID!, priority: IssuePriority!): PlaybackIssue
+
+  # Account management
+  createAccount(name: String!, billingEmail: String): Account
+  updateAccount(id: ID!, name: String, logoUrl: String): Account
+  inviteUser(accountId: ID!, email: String!): Boolean
+  acceptInvite(token: String!, name: String!, password: String!): AuthPayload
+  createGroup(accountId: ID!, name: String!, description: String): Account
+  configureOIDC(accountId: ID!, name: String!, clientId: String!, clientSecret: String!, discoveryUrl: String!): Boolean
+  addDomain(accountId: ID!, domain: String!): DomainMapping
+
+  # CDN
+  provisionCDNNode(name: String!, region: String!, provider: CloudProvider!, capacityGbps: Float): CDNNode
+  decommissionCDNNode(id: ID!): CDNNode
+
+  # Webhooks
+  createWebhook(studioId: ID, accountId: ID, url: String!, events: [String!]!, description: String): Webhook
+  updateWebhook(id: ID!, active: Boolean, events: [String!]): Webhook
+  deleteWebhook(id: ID!): Webhook
+
+  # Content ratings
+  rateContent(contentId: ID!, score: Int, liked: Boolean): Boolean
+  reviewContent(contentId: ID!, body: String!, score: Int!, spoiler: Boolean): Boolean
+}
+
+# ──────────────────────────────────────────────
+# Subscriptions (WebSocket)
+# ──────────────────────────────────────────────
+
+type Subscription {
+  transcodingProgress(jobId: ID!): TranscodingJob
+  playbackIssueUpdated(issueId: ID!): PlaybackIssue
+  catalogUpdated: Content
+  cdnNodeStatus(nodeId: ID!): CDNNode
+  userNotification: Map
+}

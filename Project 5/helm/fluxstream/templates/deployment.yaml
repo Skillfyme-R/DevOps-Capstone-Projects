@@ -1,0 +1,145 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "fluxstream.fullname" . }}-api
+  labels:
+    {{- include "fluxstream.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "fluxstream.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: api
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+      labels:
+        {{- include "fluxstream.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: api
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: fluxstream-api
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: api
+              containerPort: 4000
+            - name: graphql
+              containerPort: 4001
+            - name: rtc
+              containerPort: 4002
+          env:
+            - name: MIX_ENV
+              value: {{ .Values.env.MIX_ENV | quote }}
+            - name: HOST
+              value: {{ .Values.env.HOST | quote }}
+            - name: DB_POOL_SIZE
+              value: {{ .Values.env.DB_POOL_SIZE | quote }}
+            - name: CDN_HOST
+              value: {{ .Values.env.CDN_HOST | quote }}
+            - name: SECRET_KEY_BASE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.existingSecret }}
+                  key: {{ .Values.secrets.secretKeyBase }}
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.existingSecret }}
+                  key: {{ .Values.secrets.jwtSecret }}
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.existingSecret }}
+                  key: {{ .Values.secrets.dbPassword }}
+            - name: STRIPE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.existingSecret }}
+                  key: {{ .Values.secrets.stripeSecretKey }}
+          resources:
+            {{- toYaml .Values.resources.api | nindent 12 }}
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "fluxstream.fullname" . }}-worker
+  labels:
+    {{- include "fluxstream.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      {{- include "fluxstream.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: worker
+  template:
+    metadata:
+      labels:
+        {{- include "fluxstream.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: worker
+    spec:
+      containers:
+        - name: fluxstream-worker
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["./bin/fluxstream", "start"]
+          env:
+            - name: FLUXSTREAM_MODE
+              value: worker
+          resources:
+            {{- toYaml .Values.resources.worker | nindent 12 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "fluxstream.fullname" . }}-web
+  labels:
+    {{- include "fluxstream.labels" . | nindent 4 }}
+    app.kubernetes.io/component: web
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      {{- include "fluxstream.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: web
+  template:
+    metadata:
+      labels:
+        {{- include "fluxstream.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: web
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.25-alpine
+          ports:
+            - name: http
+              containerPort: 80
+          volumeMounts:
+            - name: web-dist
+              mountPath: /var/www/fluxstream
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: nginx.conf
+          resources:
+            {{- toYaml .Values.resources.web | nindent 12 }}
+      initContainers:
+        - name: copy-dist
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          command: ["cp", "-r", "/var/www/fluxstream/.", "/dist"]
+          volumeMounts:
+            - name: web-dist
+              mountPath: /dist
+      volumes:
+        - name: web-dist
+          emptyDir: {}
+        - name: nginx-config
+          configMap:
+            name: {{ include "fluxstream.fullname" . }}-nginx

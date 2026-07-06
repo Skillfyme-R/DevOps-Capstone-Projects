@@ -14,3 +14,17 @@ Project 1/.yarn/install-state.gz
 Project 1/packages/app/build/
 Project 1/packages/backend/dist/
 Project 1/coverage/
+
+# Project 5 — Elixir build artifacts
+Project 5/_build/
+Project 5/deps/
+Project 5/log/
+Project 5/erl_crash.dump
+Project 5/apps/*/priv/static/cache_manifest.json
+
+# Project 5 — Frontend build artifacts
+Project 5/www/node_modules/
+Project 5/www/dist/
+
+# Claude internal
+.claude/

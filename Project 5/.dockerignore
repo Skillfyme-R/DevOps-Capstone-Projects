@@ -1,0 +1,12 @@
+_build/
+deps/
+.git/
+.github/
+www/node_modules/
+www/dist/
+www/.yarn/cache/
+*.log
+.DS_Store
+tmp/
+cover/
+testdata/
