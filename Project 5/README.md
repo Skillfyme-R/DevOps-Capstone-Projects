@@ -1147,6 +1147,4 @@ docker cp dist/. project5-web-1:/var/www/fluxstream/
 
 ## 16. License
 
-Copyright © Learnsyte Learning Private Limited (**Skillfyme**)
-
-All rights reserved. This software and its associated documentation are proprietary to Learnsyte Learning Private Limited (Skillfyme). Unauthorized reproduction, distribution, or use in any form is strictly prohibited.
+© Learnsyte Learning Private Limited **(Skillfyme)**
