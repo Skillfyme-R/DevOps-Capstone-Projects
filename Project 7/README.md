@@ -919,16 +919,4 @@ make health         # Run check.sh
 
 ## License
 
-Copyright &copy; 2026 **Learnsyte Learning Private Limited (Skillfyme)**. All rights reserved.
-
-This project is developed as part of the Skillfyme DevOps Capstone Program. Unauthorized reproduction, distribution, or commercial use without explicit written permission is prohibited.
-
----
-
-<div align="center">
-
-Built with precision by the **Skillfyme DevOps Engineering Program**
-
-*VaultFlow — Every dollar. Every decision. In focus.*
-
-</div>
+&copy; 2026 Learnsyte Learning Private Limited **(Skillfyme)**. All rights reserved.
