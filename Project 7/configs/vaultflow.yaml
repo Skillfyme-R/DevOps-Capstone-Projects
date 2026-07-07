@@ -1,0 +1,42 @@
+server:
+  host: "0.0.0.0"
+  port: 9090
+  metrics_port: 9091
+  allowed_origins:
+    - "http://localhost:3000"
+    - "https://app.vaultflow.io"
+  read_timeout_sec: 30
+  write_timeout_sec: 30
+  shutdown_timeout_sec: 15
+
+database:
+  url: ""                  # Set via VAULTFLOW_DATABASE_URL
+  max_open_conns: 25
+  max_idle_conns: 5
+  conn_lifetime_min: 30
+
+cache:
+  url: "redis://localhost:6379"
+  password: ""
+  db: 0
+  ttl_min: 10
+
+auth:
+  jwt_secret: ""              # Required — set via VAULTFLOW_AUTH_JWT_SECRET env var
+  token_ttl_hours: 24
+  api_key_header: "X-VaultFlow-API-Key"
+
+metrics:
+  enabled: true
+  namespace: "vaultflow"
+  path: "/metrics"
+
+features:
+  reconciliation: true
+  forecasting: true
+  alerting: true
+  portfolio: true
+
+logging:
+  level: "info"
+  format: "json"

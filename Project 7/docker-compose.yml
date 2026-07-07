@@ -1,0 +1,112 @@
+services:
+  # ── VaultFlow API ──────────────────────────────────────────────────────────
+  vaultflow-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vaultflow/api:latest
+    container_name: vaultflow-api
+    ports:
+      - "9090:9090"
+      - "9091:9091"
+    environment:
+      VAULTFLOW_ENV: development
+      VAULTFLOW_LOG_LEVEL: debug
+      VAULTFLOW_HTTP_PORT: "9090"
+      VAULTFLOW_METRICS_PORT: "9091"
+      VAULTFLOW_PROMETHEUS_ENABLED: "true"
+      VAULTFLOW_REDIS_URL: redis://redis:6379
+      VAULTFLOW_AUTH_JWT_SECRET: ${VAULTFLOW_API_KEY:-vf-local-dev-key}
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "echo ok"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - vaultflow
+
+  # ── VaultFlow UI ──────────────────────────────────────────────────────────
+  vaultflow-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
+    image: vaultflow/ui:latest
+    container_name: vaultflow-ui
+    ports:
+      - "3000:3000"
+    depends_on:
+      - vaultflow-api
+    restart: unless-stopped
+    networks:
+      - vaultflow
+
+  # ── Redis Cache ────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7.2-alpine
+    container_name: vaultflow-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - vaultflow
+
+  # ── Prometheus ────────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: vaultflow-prometheus
+    ports:
+      - "9292:9090"
+    volumes:
+      - ./configs/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=30d"
+      - "--web.enable-lifecycle"
+    depends_on:
+      - vaultflow-api
+    restart: unless-stopped
+    networks:
+      - vaultflow
+
+  # ── Grafana ───────────────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: vaultflow-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: vaultflow
+      GF_PATHS_PROVISIONING: /etc/grafana/provisioning
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./configs/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - vaultflow
+
+volumes:
+  redis-data:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  vaultflow:
+    driver: bridge

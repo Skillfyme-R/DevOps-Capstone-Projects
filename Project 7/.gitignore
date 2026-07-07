@@ -1,0 +1,39 @@
+# Go
+bin/
+*.test
+coverage.out
+*.prof
+
+# Node
+ui/node_modules/
+ui/build/
+
+# Terraform
+.terraform/
+*.tfvars
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
+terraform.tfvars.json
+
+# Docker
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+*secret*
+*credentials*
+*.pem
+*.key
+*.crt

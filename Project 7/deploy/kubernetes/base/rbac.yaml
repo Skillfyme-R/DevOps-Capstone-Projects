@@ -1,0 +1,113 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vaultflow
+  namespace: vaultflow
+  labels:
+    app.kubernetes.io/name: vaultflow
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: vaultflow
+  namespace: vaultflow
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps", "secrets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: vaultflow
+  namespace: vaultflow
+subjects:
+  - kind: ServiceAccount
+    name: vaultflow
+    namespace: vaultflow
+roleRef:
+  kind: Role
+  apiGroup: rbac.authorization.k8s.io
+  name: vaultflow
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vaultflow-config
+  namespace: vaultflow
+data:
+  vaultflow.yaml: |
+    server:
+      host: "0.0.0.0"
+      port: 9090
+      metrics_port: 9091
+    metrics:
+      enabled: true
+      namespace: vaultflow
+      path: /metrics
+    features:
+      reconciliation: true
+      forecasting: true
+      alerting: true
+      portfolio: true
+    logging:
+      level: info
+      format: json
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vaultflow-secrets
+  namespace: vaultflow
+type: Opaque
+stringData:
+  jwt-secret: "REPLACE_WITH_STRONG_SECRET"
+  database-url: "REPLACE_WITH_DATABASE_URL"
+  redis-url: "redis://vaultflow-redis:6379"
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: vaultflow-api
+  namespace: vaultflow
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vaultflow
+      app.kubernetes.io/component: api
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: vaultflow-api
+  namespace: vaultflow
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: vaultflow-api
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 75

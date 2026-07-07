@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vaultflow
+  labels:
+    app.kubernetes.io/name: vaultflow
+    app.kubernetes.io/managed-by: helm

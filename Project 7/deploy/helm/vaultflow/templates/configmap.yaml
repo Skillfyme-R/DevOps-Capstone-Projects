@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "vaultflow.fullname" . }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "vaultflow.labels" . | nindent 4 }}
+data:
+  vaultflow.yaml: |
+    server:
+      host: "0.0.0.0"
+      port: {{ .Values.api.service.httpPort }}
+      metrics_port: {{ .Values.api.service.metricsPort }}
+    metrics:
+      enabled: {{ .Values.metrics.enabled }}
+      namespace: vaultflow
+      path: /metrics
+    features:
+      reconciliation: {{ .Values.features.reconciliation }}
+      forecasting: {{ .Values.features.forecasting }}
+      alerting: {{ .Values.features.alerting }}
+      portfolio: {{ .Values.features.portfolio }}
+    logging:
+      level: info
+      format: json

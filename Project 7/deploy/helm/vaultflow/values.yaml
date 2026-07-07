@@ -1,0 +1,128 @@
+# VaultFlow Helm Chart Values
+# All values can be overridden in an overlay values file.
+
+# -- Global settings
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+
+# -- API server configuration
+api:
+  enabled: true
+  replicaCount: 2
+
+  image:
+    repository: vaultflow/api
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    httpPort: 9090
+    metricsPort: 9091
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 75
+
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+
+  env:
+    VAULTFLOW_LOG_LEVEL: info
+    VAULTFLOW_PROMETHEUS_ENABLED: "true"
+    VAULTFLOW_ENV: production
+
+  secrets:
+    jwtSecret: "REPLACE_WITH_STRONG_SECRET"
+    databaseUrl: ""
+    redisUrl: "redis://vaultflow-redis:6379"
+
+# -- UI dashboard configuration
+ui:
+  enabled: true
+  replicaCount: 2
+
+  image:
+    repository: vaultflow/ui
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    port: 3000
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+# -- Ingress configuration
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: app.vaultflow.io
+      paths:
+        - path: /
+          pathType: Prefix
+          service: ui
+    - host: api.vaultflow.io
+      paths:
+        - path: /
+          pathType: Prefix
+          service: api
+  tls:
+    - secretName: vaultflow-tls
+      hosts:
+        - app.vaultflow.io
+        - api.vaultflow.io
+
+# -- Prometheus monitoring
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: false
+    namespace: monitoring
+    interval: 30s
+    path: /metrics
+
+# -- Feature flags
+features:
+  reconciliation: true
+  forecasting: true
+  alerting: true
+  portfolio: true
+
+# -- Redis (sub-chart or external)
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: false
+  master:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 250m
+        memory: 256Mi
