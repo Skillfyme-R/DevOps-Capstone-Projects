@@ -1,0 +1,4 @@
+# This go.sum is intentionally minimal for demonstration.
+# Run `go mod tidy` after installing Go 1.22+ to populate it with verified checksums.
+# Docker Build Stage 2 (golang:1.22-alpine) will run `go mod download` which
+# fetches and verifies all checksums from the Go checksum database automatically.

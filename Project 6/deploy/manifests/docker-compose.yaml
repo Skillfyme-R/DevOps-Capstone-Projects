@@ -1,0 +1,157 @@
+version: "3.9"
+
+# NexaFlow Logistics Platform — full local development stack
+
+volumes:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  nexaflow:
+    driver: bridge
+
+services:
+  # ─────────────────────────────────────────────────────────────
+  # PostgreSQL — primary datastore
+  # ─────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: nexaflow-postgres
+    restart: unless-stopped
+    networks: [nexaflow]
+    environment:
+      POSTGRES_USER: nexaflow
+      POSTGRES_PASSWORD: nexaflow_dev_secret
+      POSTGRES_DB: nexaflow
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./../../migrations:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexaflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────────────────────────────────────────────────────
+  # Redis — caching, pub/sub, rate limiting
+  # ─────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: nexaflow-redis
+    restart: unless-stopped
+    networks: [nexaflow]
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ─────────────────────────────────────────────────────────────
+  # NexaFlow API Server
+  # ─────────────────────────────────────────────────────────────
+  nexaflow-server:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: nexaflow-server
+    restart: unless-stopped
+    networks: [nexaflow]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NEXAFLOW_DB_URL: postgres://nexaflow:nexaflow_dev_secret@postgres:5432/nexaflow?sslmode=disable
+      NEXAFLOW_REDIS_URL: redis://redis:6379/0
+      NEXAFLOW_JWT_SECRET: dev-only-change-in-production-please
+      NEXAFLOW_OTLP_ENDPOINT: otel-collector:4317
+      LOG_LEVEL: info
+    ports:
+      - "8080:8080"
+      - "9090:9090"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ─────────────────────────────────────────────────────────────
+  # React Dev Server (development only; build uses embedded assets)
+  # ─────────────────────────────────────────────────────────────
+  web:
+    image: node:20-alpine
+    container_name: nexaflow-web
+    restart: unless-stopped
+    networks: [nexaflow]
+    working_dir: /app
+    volumes:
+      - ../../web:/app
+      - /app/node_modules
+    command: sh -c "npm ci && npm run dev -- --host 0.0.0.0"
+    ports:
+      - "3000:3000"
+    environment:
+      VITE_API_BASE: http://nexaflow-server:8080
+
+  # ─────────────────────────────────────────────────────────────
+  # Prometheus — metrics collection
+  # ─────────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    container_name: nexaflow-prometheus
+    restart: unless-stopped
+    networks: [nexaflow]
+    volumes:
+      - ./prometheus/etc/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+    ports:
+      - "9091:9090"
+
+  # ─────────────────────────────────────────────────────────────
+  # Grafana — dashboards
+  # ─────────────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:10.4.2
+    container_name: nexaflow-grafana
+    restart: unless-stopped
+    networks: [nexaflow]
+    depends_on: [prometheus]
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: nexaflow_grafana
+      GF_SECURITY_ADMIN_USER: admin
+      GF_FEATURE_TOGGLES_ENABLE: publicDashboards
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3001:3000"
+
+  # ─────────────────────────────────────────────────────────────
+  # OpenTelemetry Collector
+  # ─────────────────────────────────────────────────────────────
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.100.0
+    container_name: nexaflow-otel
+    restart: unless-stopped
+    networks: [nexaflow]
+    command: ["--config=/etc/otel-config.yaml"]
+    volumes:
+      - ./otel-config.yaml:/etc/otel-config.yaml:ro
+    ports:
+      - "4317:4317"   # gRPC receiver
+      - "4318:4318"   # HTTP receiver

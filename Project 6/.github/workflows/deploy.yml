@@ -1,0 +1,97 @@
+name: NexaFlow Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        type: choice
+        options: [staging, production]
+      image_tag:
+        description: "Docker image tag to deploy"
+        required: true
+        default: "latest"
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  deploy:
+    name: Deploy to ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    concurrency:
+      group: deploy-${{ inputs.environment }}
+      cancel-in-progress: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig \
+            --name nexaflow-${{ inputs.environment }} \
+            --region ${{ env.AWS_REGION }}
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Deploy NexaFlow via Helm
+        run: |
+          helm upgrade --install nexaflow ./deploy/helm/nexaflow \
+            --namespace nexaflow \
+            --create-namespace \
+            --set image.tag=${{ inputs.image_tag }} \
+            --set environment=${{ inputs.environment }} \
+            --set-string config.dbUrl="${{ secrets.DB_URL }}" \
+            --set-string config.redisUrl="${{ secrets.REDIS_URL }}" \
+            --set-string config.jwtSecret="${{ secrets.JWT_SECRET }}" \
+            --atomic \
+            --timeout 5m \
+            --wait
+
+      - name: Run database migrations
+        run: |
+          kubectl -n nexaflow create job migration-${{ github.run_number }} \
+            --image=nexaflowio/nexaflow-server:${{ inputs.image_tag }} \
+            --restart=Never \
+            -- nexaflow-server migrate --database-url="${{ secrets.DB_URL }}"
+
+      - name: Verify deployment
+        run: |
+          kubectl -n nexaflow rollout status deployment/nexaflow-server --timeout=300s
+          kubectl -n nexaflow get pods -l app=nexaflow-server
+
+      - name: Smoke test
+        run: |
+          SVC_URL=$(kubectl -n nexaflow get ingress nexaflow-ingress -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+          curl --fail --retry 5 --retry-delay 10 "https://$SVC_URL/healthz"
+
+      - name: Notify Slack on success
+        if: success()
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "✅ NexaFlow *${{ inputs.environment }}* deployed successfully\n• Image: `${{ inputs.image_tag }}`\n• Actor: ${{ github.actor }}"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Notify Slack on failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "🚨 NexaFlow *${{ inputs.environment }}* deployment FAILED\n• Image: `${{ inputs.image_tag }}`\n• Actor: ${{ github.actor }}\n• Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

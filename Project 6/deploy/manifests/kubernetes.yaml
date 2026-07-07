@@ -1,0 +1,356 @@
+---
+# NexaFlow Kubernetes Manifests
+# Deploy the complete logistics platform to a Kubernetes cluster.
+#
+# Usage:
+#   kubectl apply -f kubernetes.yaml
+#   kubectl -n nexaflow rollout status deployment/nexaflow-server
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nexaflow
+  labels:
+    app.kubernetes.io/managed-by: nexaflow
+
+---
+# ─────────────────────────────────────────────────────────────────────────────
+# ConfigMap — runtime configuration
+# ─────────────────────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nexaflow-config
+  namespace: nexaflow
+data:
+  LOG_LEVEL: "info"
+  PORT: "8080"
+  METRICS_PORT: "9090"
+
+---
+# ─────────────────────────────────────────────────────────────────────────────
+# Secret — sensitive credentials (use sealed-secrets or external-secrets in prod)
+# ─────────────────────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Secret
+metadata:
+  name: nexaflow-secrets
+  namespace: nexaflow
+type: Opaque
+stringData:
+  NEXAFLOW_DB_URL: "postgres://nexaflow:CHANGEME@postgres-svc:5432/nexaflow?sslmode=require"
+  NEXAFLOW_REDIS_URL: "redis://:CHANGEME@redis-svc:6379/0"
+  NEXAFLOW_JWT_SECRET: "CHANGEME_STRONG_RANDOM_SECRET_AT_LEAST_32_CHARS"
+
+---
+# ─────────────────────────────────────────────────────────────────────────────
+# Deployment — NexaFlow API Server
+# ─────────────────────────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nexaflow-server
+  namespace: nexaflow
+  labels:
+    app: nexaflow-server
+    version: "1.0.0"
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nexaflow-server
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: nexaflow-server
+        version: "1.0.0"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: nexaflow-server
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        fsGroup: 65532
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: nexaflow-server
+          image: nexaflowio/nexaflow-server:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: nexaflow-config
+            - secretRef:
+                name: nexaflow-secrets
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: nexaflow-server
+
+---
+# ─────────────────────────────────────────────────────────────────────────────
+# ServiceAccount
+# ─────────────────────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nexaflow-server
+  namespace: nexaflow
+  labels:
+    app: nexaflow-server
+
+---
+# ─────────────────────────────────────────────────────────────────────────────
+# Service — ClusterIP for internal access
+# ─────────────────────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: nexaflow-server-svc
+  namespace: nexaflow
+  labels:
+    app: nexaflow-server
+spec:
+  selector:
+    app: nexaflow-server
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+    - name: metrics
+      port: 9090
+      targetPort: 9090
+
+---
+# ─────────────────────────────────────────────────────────────────────────────
+# Ingress — NGINX with TLS
+# ─────────────────────────────────────────────────────────────────────────────
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nexaflow-ingress
+  namespace: nexaflow
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - app.nexaflow.io
+      secretName: nexaflow-tls
+  rules:
+    - host: app.nexaflow.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: nexaflow-server-svc
+                port:
+                  name: http
+
+---
+# ─────────────────────────────────────────────────────────────────────────────
+# HorizontalPodAutoscaler
+# ─────────────────────────────────────────────────────────────────────────────
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: nexaflow-server-hpa
+  namespace: nexaflow
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: nexaflow-server
+  minReplicas: 2
+  maxReplicas: 20
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 70
+
+---
+# ─────────────────────────────────────────────────────────────────────────────
+# PodDisruptionBudget — maintain availability during upgrades
+# ─────────────────────────────────────────────────────────────────────────────
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: nexaflow-server-pdb
+  namespace: nexaflow
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: nexaflow-server
+
+---
+# ─────────────────────────────────────────────────────────────────────────────
+# PostgreSQL StatefulSet
+# ─────────────────────────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: nexaflow
+spec:
+  serviceName: postgres-svc
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: nexaflow
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: nexaflow-secrets
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              value: nexaflow
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "2Gi"
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+      spec:
+        accessModes: [ReadWriteOnce]
+        storageClassName: standard
+        resources:
+          requests:
+            storage: 50Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-svc
+  namespace: nexaflow
+spec:
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+  clusterIP: None
+
+---
+# ─────────────────────────────────────────────────────────────────────────────
+# Redis Deployment
+# ─────────────────────────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: nexaflow
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          command: ["redis-server", "--maxmemory", "512mb", "--maxmemory-policy", "allkeys-lru"]
+          ports:
+            - containerPort: 6379
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+            limits:
+              cpu: "200m"
+              memory: "768Mi"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-svc
+  namespace: nexaflow
+spec:
+  selector:
+    app: redis
+  ports:
+    - port: 6379

@@ -1,0 +1,127 @@
+# NexaFlow — Frontend-only stack (no Go required)
+# Runs the React web UI + PostgreSQL + Redis + Prometheus + Grafana
+# The API is replaced by a mock server so the UI is fully browsable.
+
+volumes:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  nexaflow:
+    driver: bridge
+
+services:
+  # ─────────────────────────────────────────────────────────────
+  # PostgreSQL — port 5440 (avoids collision with other projects)
+  # ─────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: nexaflow-postgres
+    restart: unless-stopped
+    networks: [nexaflow]
+    environment:
+      POSTGRES_USER: nexaflow
+      POSTGRES_PASSWORD: nexaflow_dev
+      POSTGRES_DB: nexaflow
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5440:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexaflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────────────────────────────────────────────────────
+  # Redis — port 6385
+  # ─────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: nexaflow-redis
+    restart: unless-stopped
+    networks: [nexaflow]
+    ports:
+      - "6385:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ─────────────────────────────────────────────────────────────
+  # Mock API Server — port 8086
+  # ─────────────────────────────────────────────────────────────
+  mock-api:
+    image: node:20-alpine
+    container_name: nexaflow-mock-api
+    restart: unless-stopped
+    networks: [nexaflow]
+    working_dir: /app
+    volumes:
+      - ./mock-api.js:/app/server.js:ro
+    command: node server.js
+    environment:
+      PORT: "8086"
+    ports:
+      - "8086:8086"
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:8086/healthz', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+      start_period: 5s
+
+  # ─────────────────────────────────────────────────────────────
+  # React Web UI — port 3006
+  # ─────────────────────────────────────────────────────────────
+  web:
+    image: node:20-alpine
+    container_name: nexaflow-web
+    restart: unless-stopped
+    networks: [nexaflow]
+    depends_on:
+      mock-api:
+        condition: service_started
+    working_dir: /app
+    volumes:
+      - ../../web:/app
+      - /app/node_modules
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 3006"
+    ports:
+      - "3006:3006"
+    environment:
+      VITE_API_BASE: http://mock-api:8086
+
+  # ─────────────────────────────────────────────────────────────
+  # Prometheus — port 9093
+  # ─────────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    container_name: nexaflow-prometheus
+    restart: unless-stopped
+    networks: [nexaflow]
+    volumes:
+      - ./prometheus/etc/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9093:9090"
+
+  # ─────────────────────────────────────────────────────────────
+  # Grafana — port 3007
+  # ─────────────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:10.4.2
+    container_name: nexaflow-grafana
+    restart: unless-stopped
+    networks: [nexaflow]
+    depends_on: [prometheus]
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: nexaflow_grafana
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3007:3000"

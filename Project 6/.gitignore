@@ -1,0 +1,51 @@
+# Go
+bin/
+*.exe
+*.test
+coverage.out
+*.prof
+
+# Node / Frontend
+web/node_modules/
+web/dist/
+web/.env
+web/.env.local
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Terraform
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+.terraform/
+.terraform.lock.hcl
+crash.log
+override.tf
+override.tf.json
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Docker
+.dockerignore.bak
+
+# Secrets
+*.pem
+*.key
+*.crt
+secrets/
+
+# Logs
+*.log
+logs/
+
+# Test artifacts
+tmp/
