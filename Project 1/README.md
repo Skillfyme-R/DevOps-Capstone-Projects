@@ -9,7 +9,7 @@
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-336791)
 ![Redis](https://img.shields.io/badge/Redis-7-DC382D)
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-HPA%203--20%20pods-326CE5)
-![License](https://img.shields.io/badge/License-Skillfyme-orange)
+[![License](https://img.shields.io/badge/License-Skillfyme-orange)]()
 
 ---
 
