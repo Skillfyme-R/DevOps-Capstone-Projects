@@ -2,6 +2,7 @@
 
 > A cloud-native, HIPAA-compliant, FHIR R4-interoperable Healthcare Technology platform built on a microservices architecture. Designed for hospitals, clinics, and healthcare networks requiring enterprise-grade Electronic Health Records (EHR), appointment management, clinical analytics, and patient engagement — all delivered through a modern, accessible web interface.
 
+
 ---
 
 ## Table of Contents
