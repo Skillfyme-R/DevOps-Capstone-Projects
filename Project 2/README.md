@@ -12,6 +12,7 @@
 
 **A production-grade, full-stack multi-vendor marketplace with GitOps-driven deployment, plugin-based backend architecture, and enterprise-grade observability.**
 
+
 </div>
 
 ---
