@@ -1275,4 +1275,4 @@ Accounts created via `POST /auth/register` start in `status: pending_verificatio
 
 ## 17. License
 
-Learnsyte Learning Private Limited (Skillfyme).
+Learnsyte Learning Private Limited **(Skillfyme)**

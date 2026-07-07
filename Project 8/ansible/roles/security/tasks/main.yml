@@ -1,0 +1,105 @@
+---
+- name: Disable SSH root login
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^PermitRootLogin"
+    line: "PermitRootLogin {{ ssh_permit_root_login }}"
+    state: present
+  notify: restart sshd
+  tags: ssh
+
+- name: Disable SSH password authentication
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^PasswordAuthentication"
+    line: "PasswordAuthentication {{ ssh_password_authentication }}"
+    state: present
+  notify: restart sshd
+  tags: ssh
+
+- name: Set SSH listening port
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^Port"
+    line: "Port {{ ssh_port }}"
+    state: present
+  notify: restart sshd
+  tags: ssh
+
+- name: Disable SSH X11 forwarding
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^X11Forwarding"
+    line: "X11Forwarding no"
+    state: present
+  notify: restart sshd
+  tags: ssh
+
+- name: Install firewalld
+  ansible.builtin.package:
+    name: firewalld
+    state: present
+  tags: firewall
+
+- name: Start and enable firewalld
+  ansible.builtin.service:
+    name: firewalld
+    state: started
+    enabled: yes
+  tags: firewall
+
+# immediate: yes keeps the SSM session alive during firewall activation.
+# Without this flag, the node loses its SSM connection when firewall reloads.
+- name: Allow HTTPS traffic (required for SSM agent)
+  ansible.posix.firewalld:
+    service: https
+    permanent: yes
+    immediate: yes
+    state: enabled
+  tags: firewall
+
+- name: Allow SSH traffic
+  ansible.posix.firewalld:
+    service: ssh
+    permanent: yes
+    immediate: yes
+    state: enabled
+  tags: firewall
+
+- name: Allow Kubernetes API traffic (port 6443)
+  ansible.posix.firewalld:
+    port: 6443/tcp
+    permanent: yes
+    immediate: yes
+    state: enabled
+  tags: firewall
+
+- name: Allow kubelet API traffic (port 10250)
+  ansible.posix.firewalld:
+    port: 10250/tcp
+    permanent: yes
+    immediate: yes
+    state: enabled
+  tags: firewall
+
+- name: Disable telnet if present
+  ansible.builtin.service:
+    name: telnet
+    state: stopped
+    enabled: no
+  ignore_errors: yes
+  tags: services
+
+- name: Install dnf-automatic for security patches
+  ansible.builtin.package:
+    name: dnf-automatic
+    state: present
+  tags: updates
+
+- name: Enable automatic security updates timer
+  ansible.builtin.service:
+    name: dnf-automatic.timer
+    state: started
+    enabled: yes
+  ignore_errors: yes
+  tags: updates

@@ -1018,4 +1018,4 @@ Forms that submitted data appeared to not work because `useQuery` cached stale r
 
 ## 17. License
 
-© Learnsyte Learning Private Limited **(Skillfyme)**
+Learnsyte Learning Private Limited **(Skillfyme)**

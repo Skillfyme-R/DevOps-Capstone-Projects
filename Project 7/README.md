@@ -919,4 +919,4 @@ make health         # Run check.sh
 
 ## License
 
-&copy; 2026 Learnsyte Learning Private Limited **(Skillfyme)**. All rights reserved.
+Learnsyte Learning Private Limited **(Skillfyme)**

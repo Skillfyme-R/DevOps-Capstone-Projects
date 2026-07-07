@@ -1,0 +1,28 @@
+project_name: cartflow
+platform_full_name: "CartFlow Commerce Platform"
+deploy_environment: production
+aws_region: us-east-1
+
+base_packages:
+  - wget
+  - git
+  - vim
+  - htop
+  - net-tools
+  - unzip
+  - python3
+  - python3-pip
+  - jq
+  - curl
+
+ssh_port: 22
+ssh_permit_root_login: "no"
+ssh_password_authentication: "no"
+
+cloudwatch_log_group: /cartflow/nodes
+cloudwatch_retention_days: 90
+
+deploy_user: cartflow-deploy
+system_file_limit: 65536
+
+timezone: UTC

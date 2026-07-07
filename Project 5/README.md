@@ -1147,4 +1147,4 @@ docker cp dist/. project5-web-1:/var/www/fluxstream/
 
 ## 16. License
 
-© Learnsyte Learning Private Limited **(Skillfyme)**
+Learnsyte Learning Private Limited **(Skillfyme)**

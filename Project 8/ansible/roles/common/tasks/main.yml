@@ -1,0 +1,54 @@
+---
+- name: Update all system packages
+  ansible.builtin.package:
+    name: "*"
+    state: latest
+  tags: update
+
+- name: Install base packages required by CartFlow
+  ansible.builtin.package:
+    name: "{{ base_packages }}"
+    state: present
+  tags: packages
+
+- name: Set system timezone to {{ timezone }}
+  community.general.timezone:
+    name: "{{ timezone }}"
+  tags: timezone
+
+- name: Create CartFlow deploy user
+  ansible.builtin.user:
+    name: "{{ deploy_user }}"
+    shell: /bin/bash
+    groups: wheel
+    append: yes
+    create_home: yes
+    comment: "CartFlow CI/CD Deploy User"
+  tags: users
+
+- name: Configure open file descriptor limit
+  ansible.builtin.pam_limits:
+    domain: "*"
+    limit_type: "-"
+    limit_item: nofile
+    value: "{{ system_file_limit }}"
+  tags: limits
+
+- name: Check available disk space
+  ansible.builtin.shell: df -h /
+  register: disk_space
+  changed_when: false
+  tags: check
+
+- name: Report disk space
+  ansible.builtin.debug:
+    msg: "{{ disk_space.stdout }}"
+  tags: check
+
+- name: Ensure journald persistent logging is enabled
+  ansible.builtin.lineinfile:
+    path: /etc/systemd/journald.conf
+    regexp: "^#?Storage="
+    line: "Storage=persistent"
+  notify: restart journald
+  tags: logging

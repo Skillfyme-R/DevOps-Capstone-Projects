@@ -940,11 +940,3 @@ Multiple Docker Compose projects were simultaneously occupying standard ports (5
 ## 17. License
 
 Learnsyte Learning Private Limited **(Skillfyme)**
-
----
-
-<div align="center">
-  <strong>ShieldGrid</strong> — Security Posture Management<br/>
-  Built with FastAPI &nbsp;·&nbsp; React &nbsp;·&nbsp; PostgreSQL &nbsp;·&nbsp; Redis &nbsp;·&nbsp; Docker &nbsp;·&nbsp; Kubernetes &nbsp;·&nbsp; Terraform<br/>
-  <em>A Skillfyme DevOps Capstone Project &nbsp;—&nbsp; Learnsyte Learning Private Limited</em>
-</div>

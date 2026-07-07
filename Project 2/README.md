@@ -942,4 +942,4 @@ Implementing GitOps without a cloud container registry (ECR, GCR) required build
 
 ## License
 
-Learnsyte Learning Private Limited (Skillfyme).
+Learnsyte Learning Private Limited **(Skillfyme)**

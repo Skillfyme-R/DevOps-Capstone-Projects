@@ -1288,4 +1288,4 @@ terraform apply tfplan
 
 ## 17. License
 
-Learnsyte Learning Private Limited (Skillfyme).
+Learnsyte Learning Private Limited **(Skillfyme)**

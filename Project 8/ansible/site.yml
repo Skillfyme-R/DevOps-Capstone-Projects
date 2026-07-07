@@ -1,0 +1,48 @@
+---
+# CartFlow Commerce Platform — Main Ansible Playbook
+# Configures all EKS worker nodes via AWS SSM (no SSH, no bastion required)
+# Run: ansible-playbook ansible/site.yml
+
+- name: Base system configuration for all CartFlow nodes
+  hosts: eks_nodes
+  become: yes
+  roles:
+    - common
+
+- name: Security hardening for CartFlow nodes
+  hosts: eks_nodes
+  become: yes
+  roles:
+    - security
+
+- name: CloudWatch monitoring agent setup
+  hosts: eks_nodes
+  become: yes
+  roles:
+    - monitoring
+
+- name: Post-configuration verification
+  hosts: eks_nodes
+  become: yes
+  tasks:
+    - name: Verify node is ready
+      ansible.builtin.debug:
+        msg: "CartFlow node {{ inventory_hostname }} configured successfully in {{ deploy_environment }}"
+
+    - name: Collect system facts
+      ansible.builtin.setup:
+        gather_subset:
+          - hardware
+          - network
+      register: system_facts
+
+    - name: Display node summary
+      ansible.builtin.debug:
+        msg:
+          - "Hostname   : {{ ansible_hostname }}"
+          - "OS         : {{ ansible_distribution }} {{ ansible_distribution_version }}"
+          - "vCPUs      : {{ ansible_processor_vcpus }}"
+          - "RAM        : {{ ansible_memtotal_mb }} MB"
+          - "IP Address : {{ ansible_default_ipv4.address }}"
+          - "Platform   : {{ platform_full_name }}"
+          - "Environment: {{ deploy_environment }}"

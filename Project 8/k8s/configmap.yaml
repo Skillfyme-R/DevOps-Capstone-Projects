@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cartflow-config
+  namespace: cartflow
+  labels:
+    app: cartflow-api
+    component: config
+data:
+  APP_VERSION: "2.0.0"
+  ENVIRONMENT: "production"
+  PORT: "5000"
+  DEBUG: "false"
+  LOG_LEVEL: "INFO"
+  COMPANY_NAME: "CartFlow Inc."
+  PLATFORM_NAME: "CartFlow Commerce"
