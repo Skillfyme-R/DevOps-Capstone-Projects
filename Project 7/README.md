@@ -1,5 +1,6 @@
 # VaultFlow — Financial Intelligence Platform
 
+
 > **Every dollar. Every decision. In focus.**
 
 [![CI](https://github.com/Skillfyme-R/DevOps-Capstone-Projects/actions/workflows/ci.yml/badge.svg)](https://github.com/Skillfyme-R/DevOps-Capstone-Projects/actions)
