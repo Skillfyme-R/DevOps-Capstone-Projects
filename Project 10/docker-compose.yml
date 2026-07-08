@@ -1,0 +1,159 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: deploypilot
+      POSTGRES_USER: deploypilot
+      POSTGRES_PASSWORD: deploypilot
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U deploypilot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/api/Dockerfile
+    environment:
+      - APP_ENV=development
+      - PYTHONPATH=/app
+      - DATABASE_URL=postgresql+asyncpg://deploypilot:deploypilot@postgres:5432/deploypilot
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - LOG_FORMAT=text
+      - DEBUG=true
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./deploypilot:/app/deploypilot
+    command: >
+      uvicorn deploypilot.main:app
+      --host 0.0.0.0 --port 8000
+      --reload --log-level debug
+
+  migrate:
+    build:
+      context: .
+      dockerfile: docker/api/Dockerfile
+    environment:
+      - PYTHONPATH=/app
+      - DATABASE_URL=postgresql+asyncpg://deploypilot:deploypilot@postgres:5432/deploypilot
+      - SECRET_KEY=dev-secret-key-change-in-production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: alembic -c deploypilot/db/alembic.ini upgrade head
+    profiles:
+      - migrate
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/worker/Dockerfile
+    environment:
+      - APP_ENV=development
+      - PYTHONPATH=/app
+      - DATABASE_URL=postgresql+asyncpg://deploypilot:deploypilot@postgres:5432/deploypilot
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - SECRET_KEY=dev-secret-key-change-in-production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./deploypilot:/app/deploypilot
+      - /tmp/deploypilot:/tmp/deploypilot
+
+  beat:
+    build:
+      context: .
+      dockerfile: docker/worker/Dockerfile
+    command: >
+      celery -A deploypilot.workers.celery_app beat
+      --loglevel=info
+    environment:
+      - APP_ENV=development
+      - PYTHONPATH=/app
+      - DATABASE_URL=postgresql+asyncpg://deploypilot:deploypilot@postgres:5432/deploypilot
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+    depends_on:
+      - redis
+
+  flower:
+    build:
+      context: .
+      dockerfile: docker/worker/Dockerfile
+    command: celery -A deploypilot.workers.celery_app flower --port=5555
+    environment:
+      - PYTHONPATH=/app
+      - CELERY_BROKER_URL=redis://redis:6379/1
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+
+  nginx:
+    image: nginx:1.25-alpine
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./docs/operations/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=15d"
+
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+
+volumes:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
