@@ -1293,6 +1293,4 @@ Migrations use raw idempotent PL/pgSQL `DO $$ BEGIN ... END $$;` blocks to safel
 
 ## 18. License
 
-Copyright © Learnsyte Learning Private Limited (Skillfyme). All rights reserved.
-
-This project is proprietary software developed as part of the Skillfyme DevOps Capstone Program. Unauthorized reproduction, distribution, or commercial use is strictly prohibited.
+© Learnsyte Learning Private Limited **(Skillfyme)**
