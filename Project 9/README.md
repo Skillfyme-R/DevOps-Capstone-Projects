@@ -825,4 +825,4 @@ curl http://localhost:8080/api/v1/analytics/summary
 
 ## License
 
-Copyright © Learnsyte Learning Private Limited **(Skillfyme)**. All rights reserved.
+© Learnsyte Learning Private Limited **(Skillfyme)**
