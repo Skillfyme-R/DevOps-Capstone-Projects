@@ -1,0 +1,6 @@
+# MediCart Healthcare Platform — Combined Kubernetes Manifest
+# Apply with: kubectl apply -f k8s.yaml
+# Individual files in this directory should be preferred for granular management.
+#
+# This file is a convenience bundle for quick local deployments.
+# Production deployments should use Helm or ArgoCD.

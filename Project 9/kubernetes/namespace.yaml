@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: medicart
+  labels:
+    app.kubernetes.io/part-of: medicart-platform
+    company.medicart/environment: dev
+    istio-injection: enabled

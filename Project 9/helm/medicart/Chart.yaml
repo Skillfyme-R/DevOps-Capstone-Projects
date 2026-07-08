@@ -1,0 +1,18 @@
+apiVersion: v2
+name: medicart
+description: MediCart Healthcare E-Commerce Platform — Helm chart for AWS EKS (us-east-1)
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+home: https://medicart.health
+sources:
+  - https://github.com/medicart-health/medicart-platform
+keywords:
+  - healthcare
+  - ecommerce
+  - saas
+  - api
+maintainers:
+  - name: MediCart DevOps Team
+    email: devops@medicart.health
+    url: https://medicart.health

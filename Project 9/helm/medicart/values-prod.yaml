@@ -1,0 +1,24 @@
+replicaCount: 3
+image:
+  tag: "stable"
+env:
+  - name: ENVIRONMENT
+    value: "prod"
+  - name: AWS_REGION
+    value: "us-east-1"
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+resources:
+  requests:
+    cpu: "200m"
+    memory: "256Mi"
+    ephemeral-storage: "256Mi"
+  limits:
+    cpu: "1000m"
+    memory: "1Gi"
+    ephemeral-storage: "512Mi"
+envFromSecret:
+  enabled: true
+  secretName: "medicart-app-secrets"
