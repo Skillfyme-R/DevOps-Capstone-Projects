@@ -1,0 +1,130 @@
+pipeline {
+  agent any
+
+  environment {
+    AWS_REGION   = 'us-east-1'
+    AWS_ACCOUNT  = credentials('medinova-aws-account-id')
+    ECR_REPO     = "${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/medinova/appointment-api"
+    EKS_CLUSTER  = 'medinova-dev-cluster'
+    HELM_RELEASE = 'medinova'
+    HELM_NS      = 'medinova'
+  }
+
+  stages {
+    stage('Checkout') {
+      steps { checkout scm }
+    }
+
+    stage('Install Dependencies') {
+      steps {
+        sh 'pip install -r app/requirements.txt'
+      }
+    }
+
+    stage('Unit Tests') {
+      steps {
+        dir('app') {
+          sh '''
+            pytest tests/unit/ \
+              --cov=src \
+              --cov-report=xml:coverage.xml \
+              --cov-report=term-missing \
+              -v
+          '''
+        }
+      }
+    }
+
+    stage('SonarQube Analysis') {
+      steps {
+        withSonarQubeEnv('sonar') {
+          sh '''
+            sonar-scanner \
+              -Dsonar.projectKey=medinova-platform \
+              -Dsonar.projectName="MediNova Health Solutions" \
+              -Dsonar.python.coverage.reportPaths=app/coverage.xml
+          '''
+        }
+      }
+    }
+
+    stage('Quality Gate') {
+      steps {
+        timeout(time: 5, unit: 'MINUTES') {
+          waitForQualityGate abortPipeline: true
+        }
+      }
+    }
+
+    stage('Terraform Validate') {
+      steps {
+        withAWS(region: "${AWS_REGION}", credentials: 'medinova-aws-credentials') {
+          dir('terraform') {
+            sh '''
+              terraform fmt -check -recursive
+              terraform init -backend=false
+              terraform validate
+            '''
+          }
+        }
+      }
+    }
+
+    stage('Build & Push to ECR') {
+      steps {
+        withAWS(region: "${AWS_REGION}", credentials: 'medinova-aws-credentials') {
+          sh '''
+            aws ecr get-login-password --region $AWS_REGION | \
+              docker login --username AWS --password-stdin $ECR_REPO
+
+            docker build \
+              --build-arg APP_VERSION=$BUILD_NUMBER \
+              -t $ECR_REPO:$BUILD_NUMBER \
+              -t $ECR_REPO:latest \
+              app/
+
+            docker push $ECR_REPO:$BUILD_NUMBER
+            docker push $ECR_REPO:latest
+          '''
+        }
+      }
+    }
+
+    stage('Deploy to EKS') {
+      steps {
+        withAWS(region: "${AWS_REGION}", credentials: 'medinova-aws-credentials') {
+          sh '''
+            aws eks update-kubeconfig --name $EKS_CLUSTER --region $AWS_REGION
+
+            helm upgrade --install $HELM_RELEASE helm/medinova \
+              --namespace $HELM_NS \
+              --create-namespace \
+              --set image.repository=$ECR_REPO \
+              --set image.tag=$BUILD_NUMBER \
+              --wait --timeout 5m
+
+            kubectl rollout status deployment/medinova-api \
+              -n $HELM_NS --timeout=120s
+          '''
+        }
+      }
+    }
+
+    stage('Smoke Test') {
+      steps {
+        sh '''
+          POD=$(kubectl get pod -n $HELM_NS -l app.kubernetes.io/name=medinova -o jsonpath='{.items[0].metadata.name}')
+          kubectl exec -n $HELM_NS "$POD" -- \
+            python -c "import urllib.request; r=urllib.request.urlopen('http://localhost:8080/health'); assert r.status==200"
+          echo "MediNova deployment smoke test passed: $ECR_REPO:$BUILD_NUMBER"
+        '''
+      }
+    }
+  }
+
+  post {
+    success { echo "MediNova deployment successful: Build #${BUILD_NUMBER}" }
+    failure { echo "Pipeline failed at stage: ${env.STAGE_NAME}" }
+    always  { cleanWs() }
+  }
+}

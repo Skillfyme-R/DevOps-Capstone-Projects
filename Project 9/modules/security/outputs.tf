@@ -1,0 +1,9 @@
+output "kms_key_arn" { value = aws_kms_key.medinova.arn }
+output "kms_key_id" { value = aws_kms_key.medinova.key_id }
+output "eks_cluster_role_arn" { value = aws_iam_role.eks_cluster.arn }
+output "eks_node_role_arn" { value = aws_iam_role.eks_nodes.arn }
+output "cicd_role_arn" { value = aws_iam_role.cicd_role.arn }
+output "eks_cluster_sg_id" { value = aws_security_group.eks_cluster.id }
+output "eks_nodes_sg_id" { value = aws_security_group.eks_nodes.id }
+output "rds_security_group_id" { value = aws_security_group.rds.id }
+output "waf_acl_arn" { value = aws_wafv2_web_acl.medinova.arn }

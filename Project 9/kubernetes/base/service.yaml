@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: medinova-api
+  namespace: medinova
+  labels:
+    app: medinova-api
+    app.kubernetes.io/part-of: medinova-platform
+spec:
+  type: ClusterIP
+  selector:
+    app: medinova-api
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 8080

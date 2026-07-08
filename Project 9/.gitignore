@@ -1,0 +1,73 @@
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfstate.*.backup
+*.tfplan
+.terraform.lock.hcl
+terraform.tfvars
+!environments/*/terraform.tfvars
+*.tfvars.json
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+env/
+.env
+.env.*
+*.pyo
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+*.cover
+
+# Docker
+.dockerignore
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Helm
+helm/*/charts/
+helm/*/Chart.lock
+
+# Secrets (never commit)
+secrets/
+*.pem
+*.key
+*.crt
+*.p12
+*credentials*
+*secret*
+.aws/
+
+# Logs
+*.log
+logs/
+
+# Coverage reports from SonarCloud
+.scannerwork/

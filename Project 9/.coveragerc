@@ -1,0 +1,13 @@
+[run]
+source = app/src
+omit =
+    */tests/*
+    */__pycache__/*
+
+[report]
+show_missing = true
+skip_covered = false
+precision = 2
+
+[xml]
+output = coverage.xml
