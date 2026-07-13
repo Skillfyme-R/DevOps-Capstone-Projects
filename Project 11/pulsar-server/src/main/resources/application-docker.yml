@@ -1,0 +1,8 @@
+# Docker Compose profile: service hostnames instead of localhost, same env-var override keys as the default profile.
+spring:
+  datasource:
+    url: ${PULSAR_DB_URL:jdbc:postgresql://postgres:5432/pulsar}
+  data:
+    redis:
+      host: ${PULSAR_REDIS_HOST:redis}
+      port: ${PULSAR_REDIS_PORT:6379}

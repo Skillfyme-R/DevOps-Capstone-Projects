@@ -1,0 +1,42 @@
+{
+  "name": "regional-licensing-check",
+  "version": 1,
+  "description": "Checks a title's territory licensing status and either lets it proceed to search indexing or terminates as blocked.",
+  "timeoutSeconds": 900,
+  "ownerEmail": "content-licensing@reelforge.media",
+  "tasks": [
+    {
+      "taskReferenceName": "check_regional_licensing_ref",
+      "taskType": "SIMPLE",
+      "name": "check-regional-licensing",
+      "inputParameters": { "titleId": "${workflow.input.titleId}", "region": "${workflow.input.region}" },
+      "next": ["licensing_decision_ref"]
+    },
+    {
+      "taskReferenceName": "licensing_decision_ref",
+      "taskType": "DECISION",
+      "name": "licensing-decision",
+      "decisionInputParameter": "licensingResult",
+      "inputParameters": { "licensingResult": "${check_regional_licensing_ref.output.licensingResult}" },
+      "decisionCases": {
+        "licensed": ["search_index_refresh_ref"],
+        "blocked": ["blocked_terminate_ref"]
+      },
+      "defaultCase": ["blocked_terminate_ref"]
+    },
+    {
+      "taskReferenceName": "search_index_refresh_ref",
+      "taskType": "SIMPLE",
+      "name": "search-index-refresh",
+      "inputParameters": { "titleId": "${workflow.input.titleId}" },
+      "next": []
+    },
+    {
+      "taskReferenceName": "blocked_terminate_ref",
+      "taskType": "TERMINATE",
+      "name": "blocked-terminate",
+      "inputParameters": { "terminationStatus": "TERMINATED" },
+      "next": []
+    }
+  ]
+}

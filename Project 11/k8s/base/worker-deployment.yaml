@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pulsar-worker-deployment
+  namespace: pulsar-system
+  labels:
+    app: pulsar-worker-demo
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: pulsar-worker-demo
+  template:
+    metadata:
+      labels:
+        app: pulsar-worker-demo
+    spec:
+      containers:
+        - name: pulsar-worker-demo
+          image: reelforge/pulsar-worker-sdk-demo:latest
+          envFrom:
+            - configMapRef:
+                name: pulsar-config
+          env:
+            - name: PULSAR_WORKER_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: pulsar-secrets
+                  key: PULSAR_WORKER_API_KEY
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi

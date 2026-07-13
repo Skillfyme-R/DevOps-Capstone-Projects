@@ -1,0 +1,61 @@
+name: terraform-plan
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "terraform/**"
+
+jobs:
+  plan:
+    name: Terraform plan (production)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform/environments/production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.0"
+
+      # Real credentials come from repo/org secrets bound to an OIDC role — no long-lived keys committed here.
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.PULSAR_TERRAFORM_PLAN_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Terraform fmt check
+        run: terraform fmt -check -recursive ../../
+
+      - name: Terraform init
+        run: terraform init
+
+      - name: Terraform plan
+        id: plan
+        run: terraform plan -no-color -input=false -out=tfplan
+        env:
+          TF_VAR_pulsar_db_password: ${{ secrets.PULSAR_STAGING_DB_PASSWORD }}
+        continue-on-error: true
+
+      - name: Post plan as PR comment
+        uses: actions/github-script@v7
+        env:
+          PLAN: "${{ steps.plan.outputs.stdout }}"
+        with:
+          script: |
+            const output = `#### Terraform Plan — \`pulsar-production\`
+            \`\`\`
+            ${process.env.PLAN}
+            \`\`\`
+            `;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output,
+            });
+
+      - name: Fail if plan failed
+        if: steps.plan.outcome == 'failure'
+        run: exit 1

@@ -1,0 +1,42 @@
+{
+  "name": "content-moderation-review",
+  "version": 1,
+  "description": "Standalone content moderation review: scan a title, then publish or reject based on the decision.",
+  "timeoutSeconds": 1800,
+  "ownerEmail": "trust-safety@reelforge.media",
+  "tasks": [
+    {
+      "taskReferenceName": "content_moderation_check_ref",
+      "taskType": "SIMPLE",
+      "name": "content-moderation-check",
+      "inputParameters": { "assetId": "${workflow.input.assetId}" },
+      "next": ["moderation_decision_ref"]
+    },
+    {
+      "taskReferenceName": "moderation_decision_ref",
+      "taskType": "DECISION",
+      "name": "moderation-decision",
+      "decisionInputParameter": "moderationResult",
+      "inputParameters": { "moderationResult": "${content_moderation_check_ref.output.moderationResult}" },
+      "decisionCases": {
+        "approved": ["publish_to_cdn_ref"],
+        "flagged": ["reject_terminate_ref"]
+      },
+      "defaultCase": ["reject_terminate_ref"]
+    },
+    {
+      "taskReferenceName": "publish_to_cdn_ref",
+      "taskType": "SIMPLE",
+      "name": "publish-to-cdn",
+      "inputParameters": { "assetId": "${workflow.input.assetId}" },
+      "next": []
+    },
+    {
+      "taskReferenceName": "reject_terminate_ref",
+      "taskType": "TERMINATE",
+      "name": "reject-terminate",
+      "inputParameters": { "terminationStatus": "TERMINATED" },
+      "next": []
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "name": "cdn-refresh-pipeline",
+  "version": 1,
+  "description": "Linear housekeeping pipeline: invalidate stale CDN cache, refresh the search index, then recalculate the title's trending score.",
+  "timeoutSeconds": 600,
+  "ownerEmail": "media-ops@reelforge.media",
+  "tasks": [
+    {
+      "taskReferenceName": "cdn_cache_invalidate_ref",
+      "taskType": "SIMPLE",
+      "name": "cdn-cache-invalidate",
+      "inputParameters": { "assetId": "${workflow.input.assetId}" },
+      "next": ["search_index_refresh_ref"]
+    },
+    {
+      "taskReferenceName": "search_index_refresh_ref",
+      "taskType": "SIMPLE",
+      "name": "search-index-refresh",
+      "inputParameters": { "titleId": "${workflow.input.titleId}" },
+      "next": ["recalc_trending_score_ref"]
+    },
+    {
+      "taskReferenceName": "recalc_trending_score_ref",
+      "taskType": "SIMPLE",
+      "name": "recalc-trending-score",
+      "inputParameters": { "titleId": "${workflow.input.titleId}" },
+      "next": []
+    }
+  ]
+}

@@ -1,0 +1,122 @@
+[
+  {
+    "name": "validate-upload",
+    "description": "Validates a video upload's container/codec metadata",
+    "retryCount": 2,
+    "retryLogic": "FIXED",
+    "retryDelaySeconds": 5,
+    "timeoutSeconds": 60,
+    "inputKeys": ["assetId"],
+    "outputKeys": ["valid", "container", "videoCodec", "audioCodec", "durationSeconds"]
+  },
+  {
+    "name": "transcode-video",
+    "description": "Transcodes a source video into multiple ABR bitrate renditions",
+    "retryCount": 3,
+    "retryLogic": "EXPONENTIAL_BACKOFF",
+    "retryDelaySeconds": 10,
+    "timeoutSeconds": 1800,
+    "inputKeys": ["assetId"],
+    "outputKeys": ["renditions"]
+  },
+  {
+    "name": "generate-thumbnail",
+    "description": "Extracts thumbnail images at multiple timestamps",
+    "retryCount": 2,
+    "retryLogic": "FIXED",
+    "retryDelaySeconds": 5,
+    "timeoutSeconds": 120,
+    "inputKeys": ["assetId"],
+    "outputKeys": ["thumbnails"]
+  },
+  {
+    "name": "apply-drm",
+    "description": "Packages renditions with Widevine/FairPlay/PlayReady DRM licenses",
+    "retryCount": 3,
+    "retryLogic": "EXPONENTIAL_BACKOFF",
+    "retryDelaySeconds": 10,
+    "timeoutSeconds": 300,
+    "inputKeys": ["assetId"],
+    "outputKeys": ["drmApplied", "widevineLicenseUrl", "fairPlayLicenseUrl", "playReadyLicenseUrl"]
+  },
+  {
+    "name": "generate-subtitles",
+    "description": "Generates speech-to-text subtitles for the primary language",
+    "retryCount": 2,
+    "retryLogic": "FIXED",
+    "retryDelaySeconds": 10,
+    "timeoutSeconds": 600,
+    "inputKeys": ["assetId", "primaryLanguage"],
+    "outputKeys": ["primaryLanguage", "subtitleUrl", "confidenceScore"]
+  },
+  {
+    "name": "localize-subtitles",
+    "description": "Translates the primary subtitle track into additional target languages",
+    "retryCount": 2,
+    "retryLogic": "FIXED",
+    "retryDelaySeconds": 10,
+    "timeoutSeconds": 600,
+    "inputKeys": ["assetId", "targetLanguages"],
+    "outputKeys": ["localizedSubtitles"]
+  },
+  {
+    "name": "content-moderation-check",
+    "description": "Runs an automated content policy scan and returns a pass/flag decision",
+    "retryCount": 1,
+    "retryLogic": "FIXED",
+    "retryDelaySeconds": 5,
+    "timeoutSeconds": 120,
+    "inputKeys": ["assetId"],
+    "outputKeys": ["moderationResult", "policyVersion"]
+  },
+  {
+    "name": "publish-to-cdn",
+    "description": "Publishes final packaged assets to the CDN edge network",
+    "retryCount": 3,
+    "retryLogic": "EXPONENTIAL_BACKOFF",
+    "retryDelaySeconds": 15,
+    "timeoutSeconds": 600,
+    "inputKeys": ["assetId"],
+    "outputKeys": ["published", "cdnUrl", "edgeRegions"]
+  },
+  {
+    "name": "cdn-cache-invalidate",
+    "description": "Invalidates stale CDN cache entries for an asset",
+    "retryCount": 2,
+    "retryLogic": "FIXED",
+    "retryDelaySeconds": 5,
+    "timeoutSeconds": 120,
+    "inputKeys": ["assetId"],
+    "outputKeys": ["invalidationId", "status"]
+  },
+  {
+    "name": "check-regional-licensing",
+    "description": "Checks a title against territory licensing rules",
+    "retryCount": 1,
+    "retryLogic": "FIXED",
+    "retryDelaySeconds": 5,
+    "timeoutSeconds": 60,
+    "inputKeys": ["titleId", "region"],
+    "outputKeys": ["licensingResult", "allowedTerritories"]
+  },
+  {
+    "name": "search-index-refresh",
+    "description": "Refreshes a title's document in the catalog search index",
+    "retryCount": 2,
+    "retryLogic": "FIXED",
+    "retryDelaySeconds": 5,
+    "timeoutSeconds": 60,
+    "inputKeys": ["titleId"],
+    "outputKeys": ["indexed", "indexName", "refreshedAt"]
+  },
+  {
+    "name": "recalc-trending-score",
+    "description": "Recalculates a title's trending/popularity score",
+    "retryCount": 1,
+    "retryLogic": "FIXED",
+    "retryDelaySeconds": 5,
+    "timeoutSeconds": 60,
+    "inputKeys": ["titleId"],
+    "outputKeys": ["trendingScore", "rankBucket"]
+  }
+]

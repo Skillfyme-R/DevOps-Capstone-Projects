@@ -1,0 +1,93 @@
+# =============================================================================
+# Pulsar — Workflow Orchestration Engine, by Reelforge Media
+# Local multi-container stack: Postgres, Redis, pulsar-server, a demo worker
+# fleet, and pulsar-ui, all on the pulsar-network bridge network.
+# =============================================================================
+
+networks:
+  pulsar-network:
+    name: pulsar-network
+
+volumes:
+  pulsar-postgres-data:
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: pulsar-postgres
+    environment:
+      POSTGRES_DB: pulsar
+      POSTGRES_USER: pulsar
+      POSTGRES_PASSWORD: pulsar
+    volumes:
+      - pulsar-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pulsar -d pulsar"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pulsar-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: pulsar-redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pulsar-network
+
+  pulsar-server:
+    build:
+      context: .
+      dockerfile: docker/server/Dockerfile
+    container_name: pulsar-server
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      PULSAR_DB_URL: jdbc:postgresql://postgres:5432/pulsar
+      PULSAR_DB_USERNAME: pulsar
+      PULSAR_DB_PASSWORD: pulsar
+      PULSAR_REDIS_HOST: redis
+      PULSAR_REDIS_PORT: 6379
+      PULSAR_WORKER_API_KEY: pk_dev_local_key_change_me
+      PULSAR_JWT_SECRET: dev-only-signing-secret-do-not-use-in-production-min-32-bytes
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - pulsar-network
+
+  pulsar-worker-demo:
+    build:
+      context: .
+      dockerfile: docker/worker/Dockerfile
+    container_name: pulsar-worker-demo
+    environment:
+      PULSAR_API_BASE_URL: http://pulsar-server:8080
+      PULSAR_WORKER_API_KEY: pk_dev_local_key_change_me
+    depends_on:
+      pulsar-server:
+        condition: service_healthy
+    networks:
+      - pulsar-network
+
+  pulsar-ui:
+    build:
+      context: ./pulsar-ui
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:8080
+    container_name: pulsar-ui
+    ports:
+      - "5173:80"
+    depends_on:
+      - pulsar-server
+    networks:
+      - pulsar-network

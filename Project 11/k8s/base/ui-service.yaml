@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: pulsar-ui-service
+  namespace: pulsar-system
+  labels:
+    app: pulsar-ui
+spec:
+  selector:
+    app: pulsar-ui
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+  type: ClusterIP

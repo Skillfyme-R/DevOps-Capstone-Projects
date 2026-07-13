@@ -26,5 +26,14 @@ Project 5/apps/*/priv/static/cache_manifest.json
 Project 5/www/node_modules/
 Project 5/www/dist/
 
+# Project 11 — Java/Maven build artifacts
+Project 11/*/target/
+
+# Project 11 — Frontend build artifacts
+Project 11/pulsar-ui/node_modules/
+Project 11/pulsar-ui/dist/
+Project 11/pulsar-ui/.env
+Project 11/pulsar-ui/.env.local
+
 # Claude internal
 .claude/

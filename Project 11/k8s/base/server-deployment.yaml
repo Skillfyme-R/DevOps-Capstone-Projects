@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pulsar-server-deployment
+  namespace: pulsar-system
+  labels:
+    app: pulsar-server
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: pulsar-server
+  template:
+    metadata:
+      labels:
+        app: pulsar-server
+    spec:
+      containers:
+        - name: pulsar-server
+          image: reelforge/pulsar-server:latest
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: pulsar-config
+          env:
+            - name: PULSAR_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pulsar-secrets
+                  key: PULSAR_DB_PASSWORD
+            - name: PULSAR_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: pulsar-secrets
+                  key: PULSAR_JWT_SECRET
+            - name: PULSAR_WORKER_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: pulsar-secrets
+                  key: PULSAR_WORKER_API_KEY
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 45
+            periodSeconds: 15
+            failureThreshold: 3

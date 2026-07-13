@@ -1,0 +1,111 @@
+{
+  "name": "video-ingest-pipeline",
+  "version": 1,
+  "description": "Flagship OTT ingest pipeline: validate upload, fan out to parallel transcode/thumbnail generation, join, generate + localize subtitles, apply DRM, moderate, then publish or reject.",
+  "timeoutSeconds": 7200,
+  "ownerEmail": "media-ops@reelforge.media",
+  "tasks": [
+    {
+      "taskReferenceName": "validate_upload_ref",
+      "taskType": "SIMPLE",
+      "name": "validate-upload",
+      "inputParameters": { "assetId": "${workflow.input.assetId}" },
+      "next": ["fork_transcode_thumbnail_ref"]
+    },
+    {
+      "taskReferenceName": "fork_transcode_thumbnail_ref",
+      "taskType": "FORK",
+      "name": "fork-transcode-thumbnail",
+      "next": ["transcode_video_ref", "generate_thumbnail_ref"]
+    },
+    {
+      "taskReferenceName": "transcode_video_ref",
+      "taskType": "SIMPLE",
+      "name": "transcode-video",
+      "inputParameters": { "assetId": "${workflow.input.assetId}" },
+      "next": ["join_transcode_thumbnail_ref"]
+    },
+    {
+      "taskReferenceName": "generate_thumbnail_ref",
+      "taskType": "SIMPLE",
+      "name": "generate-thumbnail",
+      "inputParameters": { "assetId": "${workflow.input.assetId}" },
+      "next": ["join_transcode_thumbnail_ref"]
+    },
+    {
+      "taskReferenceName": "join_transcode_thumbnail_ref",
+      "taskType": "JOIN",
+      "name": "join-transcode-thumbnail",
+      "joinOn": ["transcode_video_ref", "generate_thumbnail_ref"],
+      "next": ["generate_subtitles_ref"]
+    },
+    {
+      "taskReferenceName": "generate_subtitles_ref",
+      "taskType": "SIMPLE",
+      "name": "generate-subtitles",
+      "inputParameters": { "assetId": "${workflow.input.assetId}", "primaryLanguage": "${workflow.input.primaryLanguage}" },
+      "next": ["localize_subtitles_ref"]
+    },
+    {
+      "taskReferenceName": "localize_subtitles_ref",
+      "taskType": "SIMPLE",
+      "name": "localize-subtitles",
+      "inputParameters": { "assetId": "${workflow.input.assetId}", "targetLanguages": "${workflow.input.targetLanguages}" },
+      "next": ["apply_drm_ref"]
+    },
+    {
+      "taskReferenceName": "apply_drm_ref",
+      "taskType": "SIMPLE",
+      "name": "apply-drm",
+      "inputParameters": { "assetId": "${workflow.input.assetId}" },
+      "next": ["content_moderation_check_ref"]
+    },
+    {
+      "taskReferenceName": "content_moderation_check_ref",
+      "taskType": "SIMPLE",
+      "name": "content-moderation-check",
+      "inputParameters": { "assetId": "${workflow.input.assetId}" },
+      "next": ["moderation_decision_ref"]
+    },
+    {
+      "taskReferenceName": "moderation_decision_ref",
+      "taskType": "DECISION",
+      "name": "moderation-decision",
+      "decisionInputParameter": "moderationResult",
+      "inputParameters": { "moderationResult": "${content_moderation_check_ref.output.moderationResult}" },
+      "decisionCases": {
+        "approved": ["publish_to_cdn_ref"],
+        "flagged": ["reject_terminate_ref"]
+      },
+      "defaultCase": ["reject_terminate_ref"]
+    },
+    {
+      "taskReferenceName": "publish_to_cdn_ref",
+      "taskType": "SIMPLE",
+      "name": "publish-to-cdn",
+      "inputParameters": { "assetId": "${workflow.input.assetId}" },
+      "next": ["cdn_cache_invalidate_ref"]
+    },
+    {
+      "taskReferenceName": "cdn_cache_invalidate_ref",
+      "taskType": "SIMPLE",
+      "name": "cdn-cache-invalidate",
+      "inputParameters": { "assetId": "${workflow.input.assetId}" },
+      "next": ["search_index_refresh_ref"]
+    },
+    {
+      "taskReferenceName": "search_index_refresh_ref",
+      "taskType": "SIMPLE",
+      "name": "search-index-refresh",
+      "inputParameters": { "titleId": "${workflow.input.assetId}" },
+      "next": []
+    },
+    {
+      "taskReferenceName": "reject_terminate_ref",
+      "taskType": "TERMINATE",
+      "name": "reject-terminate",
+      "inputParameters": { "terminationStatus": "TERMINATED" },
+      "next": []
+    }
+  ]
+}
